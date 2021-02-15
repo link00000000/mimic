@@ -10,3 +10,7 @@ pyvirtualcam = "*"
 
 [requires]
 python_version = "3.9"
+
+[scripts]
+install_dlls = "python .scripts/install_dlls.py"
+uninstall_dlls = "python .scripts/uninstall_dlls.py"
