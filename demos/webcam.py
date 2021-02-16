@@ -1,3 +1,5 @@
+from sys import exit
+from signal import signal, SIGINT
 import argparse
 import asyncio
 import json
@@ -12,6 +14,12 @@ from av import VideoFrame
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder
 
+import pyvirtualcam
+import numpy as np
+from pyvirtualcam.camera import _WindowsCamera
+
+cam = pyvirtualcam.Camera(640, 480, 30)
+
 ROOT = os.path.dirname(__file__)
 
 logger = logging.getLogger("pc")
@@ -25,16 +33,24 @@ class VideoPreviewTrack(MediaStreamTrack):
 
     kind = "video"
 
-    def __init__(self, track: MediaStreamTrack):
+    def __init__(self, track: MediaStreamTrack, camera: _WindowsCamera):
         super().__init__()
         self.track = track
+        self.camera = camera
 
     async def recv(self) -> VideoFrame:
         frame = await self.track.recv()
-        frame_array = frame.to_ndarray(format="rgb24")
 
-        # @TODO Consume frame buffer array
-        # Format is a 2d array containing an RGB triplet
+        # Format is a 2d array containing an RGBA tuples
+        # 640x480
+        # frame_array = frame.to_ndarray(format="rgba")
+        frame_array = frame.to_ndarray(format="rgba")
+        # frame_array = np.zeros(
+        # (self.camera.height, self.camera.width, 4), np.uint8)
+        frame_array[:, :, 3] = 255
+
+        self.camera.send(frame_array)
+        self.camera.sleep_until_next_frame()
 
         return frame
 
@@ -92,7 +108,8 @@ async def offer(request):
             recorder.addTrack(track)
         elif track.kind == "video":
             local_video = VideoPreviewTrack(
-                track
+                track,
+                cam
             )
             pc.addTrack(local_video)
 
@@ -123,7 +140,14 @@ async def on_shutdown(app):
     await asyncio.gather(*coros)
     pcs.clear()
 
+
+def sigint_handler(signal_received, frame):
+    cam.close()
+
+
 if __name__ == "__main__":
+    signal(SIGINT, sigint_handler)
+
     parser = argparse.ArgumentParser(
         description="WebRTC audio / video / data-channels demo"
     )
