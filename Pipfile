@@ -11,6 +11,7 @@ pyvirtualcam = "*"
 numpy = "*"
 
 [dev-packages]
+autopep8 = "*"
 
 [requires]
 python_version = "3.9"
@@ -19,3 +20,4 @@ python_version = "3.9"
 ssl_gencerts = "mkdir -p certs && openssl req -x509 -newkey rsa:4096 -keyout certs/selfsigned.pem -out certs/selfsigned.cert -days 365 -nodes"
 install_dlls = "python .scripts/install_dlls.py"
 uninstall_dlls = "python .scripts/uninstall_dlls.py"
+start = "python main.py"
