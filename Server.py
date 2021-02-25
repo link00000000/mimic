@@ -1,14 +1,16 @@
 from aiohttp import web
-from aiohttp.web_routedef import AbstractRouteDef
+from aiohttp.web_routedef import AbstractRouteDef, static
+from aiohttp.web_request import Request
 import asyncio
-from typing import Callable
 
 
 class Server:
     host: str
     port: int
 
+    routes = web.RouteTableDef()
     app = web.Application()
+
     runner: web.AppRunner
     site: web.TCPSite
 
@@ -16,10 +18,13 @@ class Server:
         self.host = host
         self.port = port
 
-    def add_route(self, route: AbstractRouteDef):
-        self.app.add_routes([route])
+    @routes.get('/')
+    async def hello(request: Request):
+        return web.Response(text="Hello, world")
 
     async def start(self):
+        self.app.add_routes(self.routes)
+
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
 

@@ -1,21 +1,23 @@
 import asyncio
 from Server import Server
-from aiohttp import web
-from aiohttp.web_request import Request
-from aiohttp.web_response import StreamResponse
-from typing import Awaitable
+from threading import Thread
 
 
-async def hello_world_handler(request: Request) -> Awaitable[StreamResponse]:
-    return web.Response(text="👋,🌎!")
+def run_server():
+    server = Server()
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(server.start())
+    loop.run_forever()
 
 
 def main():
-    server = Server()
-    server.add_route(web.get('/', hello_world_handler))
+    server_thread = Thread(target=run_server)
+    server_thread.start()
 
-    event_loop = asyncio.get_event_loop()
-    event_loop.run_until_complete(server.start())
+    server_thread.join()
 
 
 if __name__ == "__main__":
