@@ -1,7 +1,7 @@
 from aiohttp import web
-from aiohttp.web_routedef import AbstractRouteDef, static
 from aiohttp.web_request import Request
 import asyncio
+from threading import Event
 
 
 class Server:
@@ -11,12 +11,16 @@ class Server:
     routes = web.RouteTableDef()
     app = web.Application()
 
+    stop_event: Event
+
     runner: web.AppRunner
     site: web.TCPSite
 
-    def __init__(self, host='localhost', port=8080):
+    def __init__(self, host='localhost', port=8080, stop_event: Event = None):
         self.host = host
         self.port = port
+
+        self.stop_event = stop_event
 
     @routes.get('/')
     async def hello(request: Request):
@@ -35,4 +39,8 @@ class Server:
 
         # Loop infinitely in 1 hour intervals
         while True:
-            await asyncio.sleep(3600)
+            if(self.stop_event != None and self.stop_event.is_set()):
+                await self.runner.cleanup()
+                return
+
+            await asyncio.sleep(1)
