@@ -43,4 +43,4 @@ class Server:
                 await self.runner.cleanup()
                 return
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(3600)
