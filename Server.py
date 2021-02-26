@@ -1,10 +1,11 @@
+from EventEmitter import EventEmitter
 from aiohttp import web
 from aiohttp.web_request import Request
 import asyncio
 from threading import Event
 
 
-class Server:
+class Server(EventEmitter):
     host: str
     port: int
 
@@ -27,6 +28,8 @@ class Server:
         return web.Response(text="Hello, world")
 
     async def start(self):
+        self.emit('start')
+
         self.app.add_routes(self.routes)
 
         self.runner = web.AppRunner(self.app)
@@ -43,4 +46,4 @@ class Server:
                 await self.runner.cleanup()
                 return
 
-            await asyncio.sleep(3600)
+            await asyncio.sleep(1)

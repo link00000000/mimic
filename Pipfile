@@ -9,6 +9,7 @@ aiortc = "*"
 pillow = "*"
 pyvirtualcam = "*"
 numpy = "*"
+pythonlangutil = "*"
 
 [dev-packages]
 autopep8 = "*"
