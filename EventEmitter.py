@@ -5,7 +5,7 @@ from pythonlangutil.overload import Overload, signature
 class EventEmitter:
     _listeners: dict[str, list[Callable]] = {}
 
-    def emit(self, event: str, *args, **kwargs):
+    def _emit(self, event: str, *args, **kwargs):
         if not event in self._listeners:
             return
 
