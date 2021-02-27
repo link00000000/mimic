@@ -1,10 +1,10 @@
+from GUI import Application
 import asyncio
-
-from aiohttp.web_request import Request
 from Server import Server
 from threading import Thread, Event
 from signal import signal, SIGINT, SIGTERM
-from EventEmitter import EventEmitter
+import tkinter as tk
+from Pipes import StringMessage
 
 stop_event = Event()
 
@@ -20,26 +20,40 @@ def run_server(server: Server):
     loop.run_until_complete(server.start())
 
 
+def run_gui(app: Application):
+    app.mainloop()
+
+
 def main():
+    signal(SIGINT, stop_handler)
+    signal(SIGTERM, stop_handler)
+
     server = Server(stop_event=stop_event)
-
-    @server.on('start')
-    def log_start():
-        print("Web server is starting")
-
-    @server.on('request')
-    def log_request(path: str):
-        print("Request made to", path)
-
     server_thread = Thread(target=run_server, args=[server])
     server_thread.start()
 
-    while True:
-        signal(SIGINT, stop_handler)
-        signal(SIGTERM, stop_handler)
+    gui = Application(master=tk.Tk())
 
+    @gui.on('quit')
+    def on_gui_quit():
+        print("Stopping...")
+        stop_event.set()
+
+    # Main loop
+    while True:
         if stop_event.is_set():
             break
+
+        # Get data from web server
+        if server.pipe.poll():
+            data = server.pipe.recv()
+
+            if data.isType(StringMessage):
+                gui.text_area.insert(tk.INSERT, data.payload.rstrip() + '\n')
+
+        # Update GUI
+        gui.update_idletasks()
+        gui.update()
 
     server_thread.join()
 
