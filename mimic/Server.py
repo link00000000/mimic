@@ -2,7 +2,7 @@ from aiohttp import web
 from aiohttp.web_request import Request
 import asyncio
 from threading import Event
-from mimic.Pipeable import StringMessage, Pipeable
+from src.Pipeable import StringMessage, Pipeable
 
 
 class Server(Pipeable):

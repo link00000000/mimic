@@ -1,4 +1,4 @@
-from src.EventEmitter import EventEmitter
+from mimic.EventEmitter import EventEmitter
 import tkinter as tk
 
 

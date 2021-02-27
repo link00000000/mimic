@@ -1,10 +1,11 @@
-from src.GUI import Application
 import asyncio
-from src.Server import Server
 from threading import Thread, Event
 from signal import signal, SIGINT, SIGTERM
 import tkinter as tk
-from src.Pipeable import StringMessage
+
+from mimic.Pipeable import StringMessage
+from mimic.GUI import Application
+from mimic.Server import Server
 
 stop_event = Event()
 
