@@ -22,3 +22,4 @@ ssl_gencerts = "mkdir -p certs && openssl req -x509 -newkey rsa:4096 -keyout cer
 install_dlls = "python .scripts/install_dlls.py"
 uninstall_dlls = "python .scripts/uninstall_dlls.py"
 start = "python main.py"
+dev = "nodemon --watch main.py --watch mimic --ext py --exec python main.py" # Requires that nodemon is installed globally
