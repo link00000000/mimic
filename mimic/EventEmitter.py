@@ -1,8 +1,9 @@
 from typing import Callable
 from pythonlangutil.overload import Overload, signature
+from abc import ABC
 
 
-class EventEmitter:
+class EventEmitter(ABC):
     """
     An event system similar to Node's event system. Events are signalled by the
     class and listeners are invoked.
