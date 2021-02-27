@@ -1,11 +1,11 @@
+import logging
 import asyncio
 from threading import Thread, Event
 from signal import signal, SIGINT, SIGTERM
-import tkinter as tk
 
-from mimic.Pipeable import StringMessage
 from mimic.GUI import GUI
 from mimic.Server import Server
+from mimic.Pipeable import LogMessage
 
 stop_event = Event()
 
@@ -40,6 +40,8 @@ def main():
         print("Stopping...")
         stop_event.set()
 
+    webserver_logger = logging.getLogger('mimic.webserver')
+
     # Main loop
     while True:
         if stop_event.is_set():
@@ -49,10 +51,22 @@ def main():
         if server.pipe.poll():
             data = server.pipe.recv()
 
-            if data.isType(StringMessage):
-                gui.text_area.insert(tk.INSERT, data.payload.rstrip() + '\n')
+            if data.isType(LogMessage):
+                level = data.level
+                payload = data.payload
 
-                # Update GUI
+                if level is logging.DEBUG:
+                    webserver_logger.debug(payload)
+                elif level is logging.INFO:
+                    webserver_logger.info(payload)
+                elif level is logging.WARNING:
+                    webserver_logger.warning(payload)
+                elif level is logging.ERROR:
+                    webserver_logger.error(payload)
+                elif level is logging.CRITICAL:
+                    webserver_logger.critical(payload)
+
+        # Update GUI
         gui.update_idletasks()
         gui.update()
 

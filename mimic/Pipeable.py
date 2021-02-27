@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 from multiprocessing import Pipe
 from abc import ABC
@@ -38,3 +39,13 @@ class StringMessage(_abstractMessage):
 
     def __init__(self, payload: str):
         super().__init__(payload)
+
+
+class LogMessage(_abstractMessage):
+    """
+    A Pipeable message to send logging information
+    """
+
+    def __init__(self, payload: str, level: int = logging.INFO):
+        self.payload = payload
+        self.level = level

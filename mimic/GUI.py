@@ -1,5 +1,42 @@
-from mimic.EventEmitter import EventEmitter
 import tkinter as tk
+from tkinter.scrolledtext import ScrolledText
+import logging
+
+from mimic.EventEmitter import EventEmitter
+
+
+class DebugTextHandler(logging.Handler):
+    """
+    Register Tkinter Text as logging handler
+    """
+
+    def __init__(self, text: tk.Text):
+        """
+        Args:
+            text (tk.Text): Tkinter Text element to render logs to
+        """
+        logging.Handler.__init__(self)
+        self.text = text
+        self.formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+    def emit(self, record: logging.LogRecord):
+        """
+        Render new log message to Tkinter Text element. Called
+        when a new message is logged. Called by Python logging
+        library.
+
+        @NOTE Should *not* be called directly
+
+        Args:
+            record (logging.LogRecord): New log message
+        """
+        message = self.format(record)
+
+        self.text.configure(state='normal')
+        self.text.insert(tk.END, message + '\n')
+        self.text.configure(state='disabled')
+
+        self.text.yview(tk.END)
 
 
 class GUI(tk.Frame, EventEmitter):
@@ -22,13 +59,22 @@ class GUI(tk.Frame, EventEmitter):
         """
         Initialize widgets
         """
+
+        # Logger text output
+        self.debug_text = ScrolledText(self, state='disabled')
+        self.debug_text.configure(font='TkFixedFont')
+        self.grid(column=0, row=1, sticky='w', columnspan=4)
+        self.debug_text.pack()
+
+        # Register logger text output to logger handler
+        self.logger = logging.getLogger('mimic.webserver')
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.addHandler(DebugTextHandler(self.debug_text))
+
         self.hi_there = tk.Button(self)
         self.hi_there["text"] = "Hello, world!\n(Click me)"
         self.hi_there["command"] = self.say_hi
         self.hi_there.pack(side="top")
-
-        self.text_area = tk.Text(self)
-        self.text_area.pack()
 
         self.close_btn = tk.Button(self, text="QUIT", fg="red",
                                    command=self.quit)
