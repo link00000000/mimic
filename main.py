@@ -33,7 +33,7 @@ def main():
     server_thread = Thread(target=run_server, args=[server])
     server_thread.start()
 
-    gui = GUI(master=tk.Tk())
+    gui = GUI()
 
     @gui.on('quit')
     def on_gui_quit():

@@ -9,11 +9,14 @@ class GUI(tk.Frame, EventEmitter):
 
     widgets: list[tk.Widget] = []
 
-    def __init__(self, master=None):
+    def __init__(self, master: tk.Tk = tk.Tk()):
         super().__init__(master)
         self.master = master
         self.pack()
         self.create_widgets()
+
+        # Gracefully exit when the close button ("x button") is clicked
+        self.master.protocol("WM_DELETE_WINDOW", self.quit)
 
     def create_widgets(self):
         """
