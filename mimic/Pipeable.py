@@ -1,8 +1,9 @@
 from typing import Any
 from multiprocessing import Pipe
+from abc import ABC
 
 
-class Pipeable:
+class Pipeable(ABC):
     """
     Allows for inter-process communication (IPC) from a class
     """
