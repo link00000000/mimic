@@ -1,6 +1,6 @@
-from GUI import Application
+from src.GUI import Application
 import asyncio
-from Server import Server
+from src.Server import Server
 from threading import Thread, Event
 from signal import signal, SIGINT, SIGTERM
 import tkinter as tk
