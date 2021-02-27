@@ -1,4 +1,4 @@
-from EventEmitter import EventEmitter
+from src.EventEmitter import EventEmitter
 import tkinter as tk
 
 

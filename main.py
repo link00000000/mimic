@@ -4,7 +4,7 @@ from src.Server import Server
 from threading import Thread, Event
 from signal import signal, SIGINT, SIGTERM
 import tkinter as tk
-from Pipes import StringMessage
+from src.Pipeable import StringMessage
 
 stop_event = Event()
 
