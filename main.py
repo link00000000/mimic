@@ -4,7 +4,7 @@ from signal import signal, SIGINT, SIGTERM
 import tkinter as tk
 
 from mimic.Pipeable import StringMessage
-from mimic.GUI import Application
+from mimic.GUI import GUI
 from mimic.Server import Server
 
 stop_event = Event()
@@ -21,7 +21,7 @@ def run_server(server: Server):
     loop.run_until_complete(server.start())
 
 
-def run_gui(app: Application):
+def run_gui(app: GUI):
     app.mainloop()
 
 
@@ -33,7 +33,7 @@ def main():
     server_thread = Thread(target=run_server, args=[server])
     server_thread.start()
 
-    gui = Application(master=tk.Tk())
+    gui = GUI(master=tk.Tk())
 
     @gui.on('quit')
     def on_gui_quit():
@@ -50,9 +50,10 @@ def main():
             data = server.pipe.recv()
 
             if data.isType(StringMessage):
-                gui.text_area.insert(tk.INSERT, data.payload.rstrip() + '\n')
+                # gui.text_area.insert(tk.INSERT, data.payload.rstrip() + '\n')
+                pass
 
-        # Update GUI
+                # Update GUI
         gui.update_idletasks()
         gui.update()
 
