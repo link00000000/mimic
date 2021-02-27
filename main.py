@@ -50,8 +50,7 @@ def main():
             data = server.pipe.recv()
 
             if data.isType(StringMessage):
-                # gui.text_area.insert(tk.INSERT, data.payload.rstrip() + '\n')
-                pass
+                gui.text_area.insert(tk.INSERT, data.payload.rstrip() + '\n')
 
                 # Update GUI
         gui.update_idletasks()
