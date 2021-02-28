@@ -28,6 +28,8 @@ class WebServer(Pipeable):
     site: web.TCPSite
 
     def __init__(self, host=resolve_host(), port=8080, stop_event: Event = None):
+        super().__init__()
+
         self.host = host
         self.port = port
 

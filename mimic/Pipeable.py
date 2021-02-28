@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 from multiprocessing import Pipe
+from multiprocessing.connection import Connection
 from abc import ABC
 
 
@@ -8,7 +9,11 @@ class Pipeable(ABC):
     """
     Allows for inter-process communication (IPC) from a class
     """
-    pipe, _pipe = Pipe()
+    pipe: Connection
+    _pipe: Connection
+
+    def __init__(self):
+        self.pipe, self._pipe = Pipe()
 
 
 class _abstractMessage():

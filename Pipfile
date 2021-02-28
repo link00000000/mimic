@@ -10,6 +10,7 @@ pillow = "*"
 pyvirtualcam = "*"
 numpy = "*"
 pythonlangutil = "*"
+"infi.systray" = "*"
 
 [dev-packages]
 autopep8 = "*"

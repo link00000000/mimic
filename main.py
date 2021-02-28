@@ -1,15 +1,15 @@
 import logging
 import asyncio
-from mimic.Utils import resolve_host
 from threading import Thread, Event
 from signal import signal, SIGINT, SIGTERM
 from sys import stdout
 
 from mimic.GUI import GUI
 from mimic.WebServer import WebServer
-from mimic.Pipeable import LogMessage
+from mimic.Pipeable import LogMessage, StringMessage
 from mimic.AsyncLoggingHandler import AsyncFileHandler
 from mimic.TkinterLoggingHandler import TkinterTextHandler
+from mimic.TrayIcon import TrayIcon
 
 stop_event = Event()
 
@@ -25,19 +25,23 @@ def run_server(server: WebServer):
     loop.run_until_complete(server.start())
 
 
-def run_gui(app: GUI):
-    app.mainloop()
-
-
 def main():
     signal(SIGINT, stop_handler)
     signal(SIGTERM, stop_handler)
+
+    tray_icon = TrayIcon(stop_event=stop_event)
+    tray_icon.run()
 
     server = WebServer(stop_event=stop_event)
     server_thread = Thread(target=run_server, args=[server])
     server_thread.start()
 
     gui = GUI()
+
+    # @tray_icon.on('show_logs')
+    # def on_tray_show_logs():
+    #     print("Hello from the tray icon!")
+    #     gui.after(0, gui.debug_log_window.show())
 
     @gui.on('quit')
     def on_gui_quit():
@@ -47,7 +51,8 @@ def main():
     webserver_logger = logging.getLogger('mimic.webserver')
     webserver_logger.addHandler(AsyncFileHandler("mimic.log"))
     webserver_logger.addHandler(logging.StreamHandler(stdout))
-    webserver_logger.addHandler(TkinterTextHandler(gui.debug_text))
+    webserver_logger.addHandler(TkinterTextHandler(
+        gui.debug_log_window.debug_text))
     webserver_logger.setLevel(logging.DEBUG)
 
     # Main loop
@@ -73,6 +78,13 @@ def main():
                     webserver_logger.error(payload)
                 elif level is logging.CRITICAL:
                     webserver_logger.critical(payload)
+
+        # Get data from tray icon
+        if tray_icon.pipe.poll():
+            message: StringMessage = tray_icon.pipe.recv()
+
+            if message == "show_debug_logs":
+                gui.debug_log_window.show()
 
         # Update GUI
         gui.update_idletasks()
