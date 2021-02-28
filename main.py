@@ -6,6 +6,7 @@ from signal import signal, SIGINT, SIGTERM
 from mimic.GUI import GUI
 from mimic.Server import Server
 from mimic.Pipeable import LogMessage
+from mimic.AsyncLoggingHandler import AsyncFileHandler
 
 stop_event = Event()
 
@@ -41,6 +42,7 @@ def main():
         stop_event.set()
 
     webserver_logger = logging.getLogger('mimic.webserver')
+    webserver_logger.addHandler(AsyncFileHandler("mimic.log"))
 
     # Main loop
     while True:
