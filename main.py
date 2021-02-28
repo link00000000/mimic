@@ -1,12 +1,15 @@
 import logging
 import asyncio
+from mimic.Utils import resolve_host
 from threading import Thread, Event
 from signal import signal, SIGINT, SIGTERM
+from sys import stdout
 
 from mimic.GUI import GUI
 from mimic.WebServer import WebServer
 from mimic.Pipeable import LogMessage
 from mimic.AsyncLoggingHandler import AsyncFileHandler
+from mimic.TkinterLoggingHandler import TkinterTextHandler
 
 stop_event = Event()
 
@@ -43,6 +46,9 @@ def main():
 
     webserver_logger = logging.getLogger('mimic.webserver')
     webserver_logger.addHandler(AsyncFileHandler("mimic.log"))
+    webserver_logger.addHandler(logging.StreamHandler(stdout))
+    webserver_logger.addHandler(TkinterTextHandler(gui.debug_text))
+    webserver_logger.setLevel(logging.DEBUG)
 
     # Main loop
     while True:

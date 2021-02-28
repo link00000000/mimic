@@ -5,6 +5,7 @@ import asyncio
 from threading import Event
 from mimic.Pipeable import Pipeable
 import logging
+from mimic.Utils import resolve_host
 
 
 class WebServer(Pipeable):
@@ -26,7 +27,7 @@ class WebServer(Pipeable):
     runner: web.AppRunner
     site: web.TCPSite
 
-    def __init__(self, host='localhost', port=8080, stop_event: Event = None):
+    def __init__(self, host=resolve_host(), port=8080, stop_event: Event = None):
         self.host = host
         self.port = port
 
@@ -52,7 +53,7 @@ class WebServer(Pipeable):
         await self.site.start()
 
         self._pipe.send(LogMessage(
-            f"Web server listening at http://{self.host}:{self.port}"))
+            f"Web server listening at http://{resolve_host()}:{self.port}"))
 
         # Loop infinitely in 1 second intervals
         while True:
