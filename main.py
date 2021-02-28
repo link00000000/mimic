@@ -4,7 +4,7 @@ from threading import Thread, Event
 from signal import signal, SIGINT, SIGTERM
 
 from mimic.GUI import GUI
-from mimic.Server import Server
+from mimic.WebServer import WebServer
 from mimic.Pipeable import LogMessage
 from mimic.AsyncLoggingHandler import AsyncFileHandler
 
@@ -15,7 +15,7 @@ def stop_handler(signal_number, frame):
     stop_event.set()
 
 
-def run_server(server: Server):
+def run_server(server: WebServer):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
@@ -30,7 +30,7 @@ def main():
     signal(SIGINT, stop_handler)
     signal(SIGTERM, stop_handler)
 
-    server = Server(stop_event=stop_event)
+    server = WebServer(stop_event=stop_event)
     server_thread = Thread(target=run_server, args=[server])
     server_thread.start()
 

@@ -7,7 +7,7 @@ from mimic.Pipeable import Pipeable
 import logging
 
 
-class Server(Pipeable):
+class WebServer(Pipeable):
     """
     Async HTTP server, messages can be recieved by polling `pipe`.
 
