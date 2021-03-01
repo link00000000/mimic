@@ -27,7 +27,7 @@ class EventEmitter(ABC):
 
     @Overload
     @signature("str", "function")
-    def on(self, event: str, callback: Callable[[any], None]):
+    def on(self, event: str, callback: Callable[[any], None]):  # type: ignore
         """
         Listen to an event
 
@@ -40,7 +40,7 @@ class EventEmitter(ABC):
 
         self._listeners[event].append(callback)
 
-    @on.overload
+    @on.overload  # type: ignore
     @signature("str")
     def on(self, event: str):
         """

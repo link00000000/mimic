@@ -2,7 +2,7 @@ import tkinter as tk
 from abc import ABC
 
 
-class AbstractTkinterWindow(tk.Toplevel, tk.Frame, ABC):
+class AbstractTkinterWindow(tk.Toplevel, tk.Frame, ABC):  # type: ignore
     pass
 
     def hide(self):

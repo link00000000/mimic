@@ -1,5 +1,5 @@
 from threading import Event, Thread
-from typing import Callable
+from typing import Callable, Optional
 
 from infi.systray import SysTrayIcon
 
@@ -9,7 +9,8 @@ from mimic.Pipeable import Pipeable
 class TrayIcon(Pipeable):
     _thread: Thread
     _icon: SysTrayIcon
-    _menu_options: list[tuple[str, str, Callable[[SysTrayIcon], None]]] = []
+    _menu_options: list[tuple[str, Optional[str],
+                              Callable[[SysTrayIcon], None]]] = []
     _stop_event: Event
 
     _icon_image: str

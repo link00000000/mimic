@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from threading import Event
+from typing import Optional
 
 from aiohttp import web
 from aiohttp.web_request import Request
@@ -23,7 +24,7 @@ class WebServer(Pipeable):
     routes = web.RouteTableDef()
     app = web.Application()
 
-    stop_event: Event
+    stop_event: Optional[Event]
 
     runner: web.AppRunner
     site: web.TCPSite
