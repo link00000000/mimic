@@ -4,7 +4,7 @@ from threading import Thread, Event
 from signal import signal, SIGINT, SIGTERM
 from sys import stdout
 
-from mimic.GUI import GUI
+from mimic.GUI.GUI import GUI
 from mimic.WebServer import WebServer
 from mimic.Pipeable import LogMessage, StringMessage
 from mimic.AsyncLoggingHandler import AsyncFileHandler
