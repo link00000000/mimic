@@ -45,7 +45,6 @@ def main():
 
     @gui.on('quit')
     def on_gui_quit():
-        print("Stopping...")
         stop_event.set()
 
     webserver_logger = logging.getLogger('mimic.webserver')

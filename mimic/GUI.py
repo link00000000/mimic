@@ -1,6 +1,8 @@
+from mimic.TkinterQRCode import QRCodeImage
 from mimic.Pipeable import Pipeable
 import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
+from mimic.Utils import resolve_host
 
 from mimic.EventEmitter import EventEmitter
 
@@ -47,23 +49,13 @@ class MainWindow(_TkinterWindow, EventEmitter):
         self.protocol("WM_DELETE_WINDOW", self.quit)
 
     def create_widgets(self):
-        self.hi_there = tk.Button(self)
-        self.hi_there["text"] = "Hello, world!\n(Click me)"
-        self.hi_there["command"] = self.say_hi
-        self.hi_there.pack(side="top")
-
-        self.close_btn = tk.Button(self, text="QUIT", fg="red",
-                                   command=self.quit)
-        self.close_btn.pack(side="bottom")
-
-    def say_hi(self):
-        print("Hi there! 👋")
+        qr_code = QRCodeImage(self, f"http://{resolve_host()}:8080")
+        qr_code.pack()
 
     def quit(self):
         """
         Cleanup and destroy GUI and emit a `quit` event
         """
-        print("QUITTING")
         self.master.destroy()
         self._emit("quit")
 
