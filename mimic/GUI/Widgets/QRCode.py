@@ -11,7 +11,9 @@ class QRCodeImage(tk.Label):
         code_bmp = tk.BitmapImage(data=code.xbm(
             scale=scale), foreground="black", background="white")
 
-        # Save a references to the image @NOTE This is important because tkinter
+        # Save a references to the image
+        #
+        # @NOTE This is important because tkinter
         # does not automatically save a referece itself. If we don't do this,
         # the image will render completely transparent
         self.img = code_bmp
