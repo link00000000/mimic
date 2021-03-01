@@ -7,8 +7,8 @@ from sys import stdout
 from mimic.GUI.GUI import GUI
 from mimic.WebServer import WebServer
 from mimic.Pipeable import LogMessage, StringMessage
-from mimic.AsyncLoggingHandler import AsyncFileHandler
-from mimic.TkinterLoggingHandler import TkinterTextHandler
+from mimic.Logging.AsyncLoggingHandler import AsyncFileHandler
+from mimic.Logging.TkinterLoggingHandler import TkinterTextHandler
 from mimic.TrayIcon import TrayIcon
 
 stop_event = Event()
