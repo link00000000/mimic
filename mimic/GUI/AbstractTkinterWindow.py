@@ -1,5 +1,5 @@
-from abc import ABC
 import tkinter as tk
+from abc import ABC
 
 
 class AbstractTkinterWindow(tk.Toplevel, tk.Frame, ABC):

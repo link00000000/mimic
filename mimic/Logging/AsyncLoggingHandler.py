@@ -1,8 +1,8 @@
+from abc import ABC
+from logging import FileHandler, LogRecord
+from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 from queue import Queue
 from threading import Thread
-from logging import LogRecord, FileHandler
-from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
-from abc import ABC
 
 
 class _AsyncHandler(ABC, object):

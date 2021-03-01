@@ -1,8 +1,8 @@
 import logging
-from typing import Any
+from abc import ABC
 from multiprocessing import Pipe
 from multiprocessing.connection import Connection
-from abc import ABC
+from typing import Any
 
 
 class Pipeable(ABC):

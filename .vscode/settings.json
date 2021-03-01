@@ -1,4 +1,11 @@
 {
-    "python.pythonPath": "C:\\Users\\logan\\.virtualenvs\\mimic-ygi_Kzv7\\Scripts\\python.exe",
-    "python.formatting.provider": "autopep8"
+    "python.formatting.provider": "autopep8",
+    "python.sortImports.args": [
+        "-rc"
+    ],
+    "[python]": {
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+        }
+    }
 }

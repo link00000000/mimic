@@ -1,6 +1,7 @@
-from typing import Callable
-from pythonlangutil.overload import Overload, signature
 from abc import ABC
+from typing import Callable
+
+from pythonlangutil.overload import Overload, signature
 
 
 class EventEmitter(ABC):

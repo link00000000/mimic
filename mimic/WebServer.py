@@ -1,10 +1,11 @@
-from mimic.Pipeable import LogMessage
+import asyncio
+import logging
+from threading import Event
+
 from aiohttp import web
 from aiohttp.web_request import Request
-import asyncio
-from threading import Event
-from mimic.Pipeable import Pipeable
-import logging
+
+from mimic.Pipeable import LogMessage, Pipeable
 from mimic.Utils import resolve_host
 
 

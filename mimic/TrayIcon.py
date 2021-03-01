@@ -1,5 +1,6 @@
-from threading import Thread, Event
+from threading import Event, Thread
 from typing import Callable
+
 from infi.systray import SysTrayIcon
 
 from mimic.Pipeable import Pipeable

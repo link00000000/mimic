@@ -1,15 +1,15 @@
-import logging
 import asyncio
-from threading import Thread, Event
-from signal import signal, SIGINT, SIGTERM
+import logging
+from signal import SIGINT, SIGTERM, signal
 from sys import stdout
+from threading import Event, Thread
 
 from mimic.GUI.GUI import GUI
-from mimic.WebServer import WebServer
-from mimic.Pipeable import LogMessage, StringMessage
 from mimic.Logging.AsyncLoggingHandler import AsyncFileHandler
 from mimic.Logging.TkinterLoggingHandler import TkinterTextHandler
+from mimic.Pipeable import LogMessage, StringMessage
 from mimic.TrayIcon import TrayIcon
+from mimic.WebServer import WebServer
 
 stop_event = Event()
 

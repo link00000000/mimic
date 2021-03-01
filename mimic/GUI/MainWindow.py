@@ -1,8 +1,8 @@
 import tkinter as tk
 
+from mimic.EventEmitter import EventEmitter
 from mimic.GUI.AbstractTkinterWindow import AbstractTkinterWindow
 from mimic.GUI.Widgets.QRCode import QRCodeImage
-from mimic.EventEmitter import EventEmitter
 from mimic.Utils import resolve_host
 
 
