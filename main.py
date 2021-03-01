@@ -38,11 +38,6 @@ def main():
 
     gui = GUI()
 
-    # @tray_icon.on('show_logs')
-    # def on_tray_show_logs():
-    #     print("Hello from the tray icon!")
-    #     gui.after(0, gui.debug_log_window.show())
-
     @gui.on('quit')
     def on_gui_quit():
         stop_event.set()
