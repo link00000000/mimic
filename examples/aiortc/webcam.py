@@ -7,10 +7,9 @@ import ssl
 import uuid
 
 from aiohttp import web
-from av import VideoFrame
-
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder
+from av import VideoFrame
 
 ROOT = os.path.dirname(__file__)
 

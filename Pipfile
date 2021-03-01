@@ -17,6 +17,7 @@ pyqrcode = "*"
 autopep8 = "*"
 mypy = "*"
 isort = "*"
+pydocstyle = "*"
 
 [requires]
 python_version = "3.9"

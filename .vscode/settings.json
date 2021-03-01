@@ -9,9 +9,11 @@
         "--follow-imports=silent",
         "--show-column-numbers"
     ],
+    "python.linting.pydocstyleEnabled": true,
     "[python]": {
         "editor.codeActionsOnSave": {
             "source.organizeImports": true
         }
-    }
+    },
+    "autoDocstring.startOnNewLine": true
 }
