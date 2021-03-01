@@ -42,6 +42,7 @@ def main():
     def on_gui_quit():
         stop_event.set()
 
+    # Initialize web server logger
     webserver_logger = logging.getLogger('mimic.webserver')
     webserver_logger.addHandler(AsyncFileHandler("mimic.log"))
     webserver_logger.addHandler(logging.StreamHandler(stdout))
