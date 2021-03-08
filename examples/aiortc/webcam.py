@@ -7,10 +7,9 @@ import ssl
 import uuid
 
 from aiohttp import web
-from av import VideoFrame
-
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder
+from av import VideoFrame
 
 ROOT = os.path.dirname(__file__)
 
@@ -150,7 +149,7 @@ if __name__ == "__main__":
         ssl_context = ssl.SSLContext()
         ssl_context.load_cert_chain(args.cert_file, args.key_file)
     else:
-        ssl_context = None
+        ssl_context = None  # type: ignore
 
     app = web.Application()
     app.on_shutdown.append(on_shutdown)

@@ -1,10 +1,13 @@
-from mimic.Pipeable import LogMessage
+"""HTTP web server."""
+import asyncio
+import logging
+from threading import Event
+from typing import Optional
+
 from aiohttp import web
 from aiohttp.web_request import Request
-import asyncio
-from threading import Event
-from mimic.Pipeable import Pipeable
-import logging
+
+from mimic.Pipeable import LogMessage, Pipeable
 from mimic.Utils import resolve_host
 
 
@@ -22,12 +25,20 @@ class WebServer(Pipeable):
     routes = web.RouteTableDef()
     app = web.Application()
 
-    stop_event: Event
+    stop_event: Optional[Event]
 
     runner: web.AppRunner
     site: web.TCPSite
 
-    def __init__(self, host=resolve_host(), port=8080, stop_event: Event = None):
+    def __init__(self, host: str = resolve_host(), port=8080, stop_event: Event = None):
+        """
+        Initialize web server.
+
+        Args:
+            host (str, optional): Host to listen to HTTP traffic on. Defaults to `resolve_host()`.
+            port (int, optional): Port to listen to HTTP traffic on. Defaults to 8080.
+            stop_event (Event, optional): When set, the web server will shutdown. Defaults to None.
+        """
         super().__init__()
 
         self.host = host
@@ -35,15 +46,15 @@ class WebServer(Pipeable):
 
         self.stop_event = stop_event
 
+        # Routes must be initialized inside the constructor so that we have access
+        # to `self`
         @self.routes.get('/')
         async def hello(request: Request):
             self._pipe.send(LogMessage("GET /", level=logging.DEBUG))
             return web.Response(text="Hello, world")
 
     async def start(self):
-        """
-        Start listening to HTTP traffic
-        """
+        """Start listening to HTTP traffic."""
         self._pipe.send(LogMessage("Web server starting..."))
 
         self.app.add_routes(self.routes)
