@@ -1,8 +1,10 @@
-from os.path import basename, splitext, join, abspath, isdir
-from os import system, mkdir
-import ctypes, sys
+import ctypes
+import sys
+from os import mkdir, system
+from os.path import abspath, basename, isdir, join, splitext
 from urllib.request import urlretrieve
 from zipfile import ZipFile
+
 
 def is_admin():
     try:

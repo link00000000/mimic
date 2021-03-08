@@ -9,8 +9,15 @@ aiortc = "*"
 pillow = "*"
 pyvirtualcam = "*"
 numpy = "*"
+pythonlangutil = "*"
+"infi.systray" = "*"
+pyqrcode = "*"
 
 [dev-packages]
+autopep8 = "*"
+mypy = "*"
+isort = "*"
+pydocstyle = "*"
 
 [requires]
 python_version = "3.9"
@@ -19,3 +26,10 @@ python_version = "3.9"
 ssl_gencerts = "mkdir -p certs && openssl req -x509 -newkey rsa:4096 -keyout certs/selfsigned.pem -out certs/selfsigned.cert -days 365 -nodes"
 install_dlls = "python .scripts/install_dlls.py"
 uninstall_dlls = "python .scripts/uninstall_dlls.py"
+start = "python main.py"
+dev = "nodemon --watch main.py --watch mimic --ext py --exec python main.py" # Requires that nodemon is installed globally, this can be installed with `npm i -g nodemon`
+lint = "python .scripts/lint.py"
+lint-imports = "isort main.py mimic"
+lint-code = "autopep8 --in-place --recursive main.py mimic"
+lint-type_checking = "mypy main.py mimic --ignore-missing-imports"
+lint-docstring = "pydocstyle main.py mimic"
