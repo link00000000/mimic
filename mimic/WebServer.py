@@ -107,7 +107,7 @@ class WebServer(Pipeable):
         await self.runner.setup()
 
         if not ssl_certs_generated(SSL_CERT, SSL_KEY):
-            generate_ssl_certs(SSL_CERT, SSL_KEY)
+            generate_ssl_certs()
 
         ssl_context = ssl.SSLContext()
         ssl_context.load_cert_chain(SSL_CERT, SSL_KEY)
@@ -117,7 +117,7 @@ class WebServer(Pipeable):
         await self.site.start()
 
         self._pipe.send(LogMessage(
-            f"Web server listening at http://{resolve_host()}:{self.port}"))
+            f"Web server listening at https://{resolve_host()}:{self.port}"))
 
         # Loop infinitely in 1 second intervals
         while True:
