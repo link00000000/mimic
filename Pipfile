@@ -33,3 +33,4 @@ lint-imports = "isort main.py mimic"
 lint-code = "autopep8 --in-place --recursive main.py mimic"
 lint-type_checking = "mypy main.py mimic --ignore-missing-imports"
 lint-docstring = "pydocstyle main.py mimic"
+debug-ios = "remotedebug_ios_webkit_adapter --port=9000" # Requires that the package is installed and configured https://github.com/RemoteDebug/remotedebug-ios-webkit-adapter
