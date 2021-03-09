@@ -1,6 +1,7 @@
 """HTTP web server."""
 import asyncio
 import os
+import ssl
 from mimetypes import MimeTypes
 from threading import Event
 from typing import Any, Callable, Coroutine, Optional
@@ -14,6 +15,10 @@ from mimic.Utils import resolve_host
 
 middleware = Callable[[Request, Any], Coroutine[Any, Any, Any]]
 mimetypes = MimeTypes()
+
+# Certificates can be generated with `pipenv run ssl_gencerts`
+SSL_CERT = "certs/selfsigned.cert"
+SSL_KEY = "certs/selfsigned.pem"
 
 
 class WebServer(Pipeable):
@@ -63,9 +68,7 @@ class WebServer(Pipeable):
         # to `self`
         @self.routes.get('/')
         async def index(request: Request):
-            """
-            Return public/index.html as entrypoint.
-            """
+            """Return public/index.html as entrypoint."""
             content: str
             with open(os.path.abspath("mimic/public/index.html"), "r") as file:
                 content = file.read()
@@ -102,7 +105,11 @@ class WebServer(Pipeable):
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
 
-        self.site = web.TCPSite(self.runner, self.host, self.port)
+        ssl_context = ssl.SSLContext()
+        ssl_context.load_cert_chain(SSL_CERT, SSL_KEY)
+
+        self.site = web.TCPSite(self.runner, self.host,
+                                self.port, ssl_context=ssl_context)
         await self.site.start()
 
         self._pipe.send(LogMessage(
