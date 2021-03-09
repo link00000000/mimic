@@ -1,7 +1,7 @@
 """HTTP web server."""
 import asyncio
-import logging
 import os
+from mimetypes import MimeTypes
 from threading import Event
 from typing import Any, Callable, Coroutine, Optional
 
@@ -13,6 +13,7 @@ from mimic.Pipeable import LogMessage, Pipeable
 from mimic.Utils import resolve_host
 
 middleware = Callable[[Request, Any], Coroutine[Any, Any, Any]]
+mimetypes = MimeTypes()
 
 
 class WebServer(Pipeable):
@@ -76,7 +77,8 @@ class WebServer(Pipeable):
             """
             Return file contents of files located in public directory.
 
-            If file is not found, return status code 404
+            If file is not found, return status code 404. Mime type of file is
+            guessed based off of file extension.
             """
             filename = os.path.abspath(os.path.join(
                 'mimic/public', request.match_info['filename']))
@@ -87,7 +89,8 @@ class WebServer(Pipeable):
             with open(filename, "r") as file:
                 content = file.read()
 
-            return web.Response(text=content)
+            mime = mimetypes.guess_type(filename)[0]
+            return web.Response(content_type=mime, text=content)
 
     async def start(self):
         """Start listening to HTTP traffic."""
