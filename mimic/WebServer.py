@@ -1,14 +1,18 @@
 """HTTP web server."""
 import asyncio
 import logging
+import os
 from threading import Event
-from typing import Optional
+from typing import Any, Callable, Coroutine, Optional
 
 from aiohttp import web
+from aiohttp.web_app import Application
 from aiohttp.web_request import Request
 
 from mimic.Pipeable import LogMessage, Pipeable
 from mimic.Utils import resolve_host
+
+middleware = Callable[[Request, Any], Coroutine[Any, Any, Any]]
 
 
 class WebServer(Pipeable):
@@ -23,7 +27,8 @@ class WebServer(Pipeable):
     port: int
 
     routes = web.RouteTableDef()
-    app = web.Application()
+    middlewares: list[middleware] = []
+    app: Application
 
     stop_event: Optional[Event]
 
@@ -46,17 +51,49 @@ class WebServer(Pipeable):
 
         self.stop_event = stop_event
 
+        @web.middleware
+        async def loggerMiddleware(request: Request, handler):
+            self._pipe.send(LogMessage(f'{request.method} {request.path}'))
+
+            return await handler(request)
+        self.middlewares.append(loggerMiddleware)
+
         # Routes must be initialized inside the constructor so that we have access
         # to `self`
         @self.routes.get('/')
-        async def hello(request: Request):
-            self._pipe.send(LogMessage("GET /", level=logging.DEBUG))
-            return web.Response(text="Hello, world")
+        async def index(request: Request):
+            """
+            Return public/index.html as entrypoint.
+            """
+            content: str
+            with open(os.path.abspath("mimic/public/index.html"), "r") as file:
+                content = file.read()
+
+            return web.Response(content_type="text/html", text=content)
+
+        @self.routes.get(r'/{filename:.+}')
+        async def static(request: Request):
+            """
+            Return file contents of files located in public directory.
+
+            If file is not found, return status code 404
+            """
+            filename = os.path.abspath(os.path.join(
+                'mimic/public', request.match_info['filename']))
+
+            if not os.path.exists(filename):
+                return web.Response(status=404)
+
+            with open(filename, "r") as file:
+                content = file.read()
+
+            return web.Response(text=content)
 
     async def start(self):
         """Start listening to HTTP traffic."""
         self._pipe.send(LogMessage("Web server starting..."))
 
+        self.app = web.Application(middlewares=self.middlewares)
         self.app.add_routes(self.routes)
 
         self.runner = web.AppRunner(self.app)
