@@ -11,7 +11,8 @@ from aiohttp.web_app import Application
 from aiohttp.web_request import Request
 
 from mimic.Pipeable import LogMessage, Pipeable
-from mimic.Utils import resolve_host
+from mimic.Utils.Host import resolve_host
+from mimic.Utils.SSL import generate_ssl_certs, ssl_certs_generated
 
 middleware = Callable[[Request, Any], Coroutine[Any, Any, Any]]
 mimetypes = MimeTypes()
@@ -104,6 +105,9 @@ class WebServer(Pipeable):
 
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
+
+        if not ssl_certs_generated(SSL_CERT, SSL_KEY):
+            generate_ssl_certs(SSL_CERT, SSL_KEY)
 
         ssl_context = ssl.SSLContext()
         ssl_context.load_cert_chain(SSL_CERT, SSL_KEY)

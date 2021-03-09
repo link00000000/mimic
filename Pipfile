@@ -12,6 +12,7 @@ numpy = "*"
 pythonlangutil = "*"
 "infi.systray" = "*"
 pyqrcode = "*"
+pyopenssl = "*"
 
 [dev-packages]
 autopep8 = "*"
