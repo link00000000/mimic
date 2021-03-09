@@ -107,7 +107,12 @@ class WebServer(Pipeable):
         await self.runner.setup()
 
         if not ssl_certs_generated(SSL_CERT, SSL_KEY):
-            generate_ssl_certs()
+            self._pipe.send(LogMessage(
+                "SSL certificate and key not found! Generating SSL certificate and key..."))
+            generate_ssl_certs(SSL_CERT, SSL_KEY)
+            self._pipe.send(LogMessage("SSL certificate and key generated."))
+        else:
+            self._pipe.send(LogMessage("SSL certificate and key found."))
 
         ssl_context = ssl.SSLContext()
         ssl_context.load_cert_chain(SSL_CERT, SSL_KEY)
