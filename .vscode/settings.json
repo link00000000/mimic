@@ -17,5 +17,5 @@
     },
     "autoDocstring.startOnNewLine": true,
     "liveServer.settings.NoBrowser": true,
-    "liveServer.settings.root": "/mimic/Views"
+    "liveServer.settings.root": "/mimic/public"
 }
