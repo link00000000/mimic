@@ -11,7 +11,7 @@ def change_webcam_name(name: str = 'Mimic'):
     have full control of the camera registry entry
 
     Params:
-        str: the desired name of the camera (defaults to Mimic)
+        name (str): the desired name of the camera (defaults to Mimic)
     """
     reg = winreg.ConnectRegistry(None, winreg.HKEY_CLASSES_ROOT)
     obs_reg = winreg.OpenKey(reg, REG_PATH, 0, winreg.KEY_SET_VALUE)
