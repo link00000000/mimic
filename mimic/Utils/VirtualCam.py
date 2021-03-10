@@ -17,5 +17,5 @@ def change_camera(name: str = 'Mimic'):
         reg = winreg.ConnectRegistry(None, winreg.HKEY_CLASSES_ROOT)
         obs_reg = winreg.OpenKey(reg, REG_PATH, 0, winreg.KEY_SET_VALUE)
         winreg.SetValueEx(obs_reg, "FriendlyName", 0, winreg.REG_SZ, name)
-    except:
-        print("Could not change the camera's name!")
+    except OSError:
+        raise OSError("Could not change the name")
