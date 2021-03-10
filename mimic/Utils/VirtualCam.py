@@ -13,9 +13,6 @@ def change_webcam_name(name: str = 'Mimic'):
     Params:
         str: the desired name of the camera (defaults to Mimic)
     """
-    try:
-        reg = winreg.ConnectRegistry(None, winreg.HKEY_CLASSES_ROOT)
-        obs_reg = winreg.OpenKey(reg, REG_PATH, 0, winreg.KEY_SET_VALUE)
-        winreg.SetValueEx(obs_reg, "FriendlyName", 0, winreg.REG_SZ, name)
-    except OSError:
-        raise OSError("Could not change the name")
+    reg = winreg.ConnectRegistry(None, winreg.HKEY_CLASSES_ROOT)
+    obs_reg = winreg.OpenKey(reg, REG_PATH, 0, winreg.KEY_SET_VALUE)
+    winreg.SetValueEx(obs_reg, "FriendlyName", 0, winreg.REG_SZ, name)
