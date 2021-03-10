@@ -15,6 +15,5 @@
             "source.organizeImports": true
         }
     },
-    "autoDocstring.startOnNewLine": true,
-    "python.pythonPath": "C:\\Users\\legen\\.virtualenvs\\mimic-ZZKku2sN\\Scripts\\python.exe"
+    "autoDocstring.startOnNewLine": true
 }
