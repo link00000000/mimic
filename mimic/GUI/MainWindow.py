@@ -33,7 +33,7 @@ class MainWindow(AbstractTkinterWindow, EventEmitter):
 
     def create_widgets(self):
         """Register widgets to window."""
-        qr_code = QRCodeImage(self, f"http://{resolve_host()}:8080")
+        qr_code = QRCodeImage(self, f"https://{resolve_host()}:8080")
         qr_code.pack()
 
     def quit(self):
