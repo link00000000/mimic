@@ -13,4 +13,7 @@ class VirtualCam:
 
     async def recv(self) -> VideoFrame:
         frame = await self.track.recv()
+
+        # @TODO Paint `VideoFrame`s to pyvirtualcam
+
         return frame
