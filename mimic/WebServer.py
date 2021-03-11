@@ -1,6 +1,5 @@
 """HTTP web server."""
 import asyncio
-import json
 import logging
 import os
 import ssl
@@ -11,12 +10,13 @@ from typing import Any, Callable, Coroutine, Optional
 from aiohttp import web
 from aiohttp.web_app import Application
 from aiohttp.web_request import Request
-from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc import MediaStreamTrack
 
 from mimic.Pipeable import LogMessage, Pipeable
 from mimic.Utils.Host import resolve_host
 from mimic.Utils.SSL import generate_ssl_certs, ssl_certs_generated
 from mimic.VirtualCam import VirtualCam
+from mimic.WebRTCVideoStream import WebRTCVideoStream
 
 middleware = Callable[[Request, Any], Coroutine[Any, Any, Any]]
 mimetypes = MimeTypes()
@@ -82,64 +82,36 @@ class WebServer(Pipeable):
 
         @self.routes.post('/webrtc-offer')
         async def webrtc_offer(request: Request):
-            params = await request.json()
-            offer = RTCSessionDescription(
-                sdp=params["sdp"], type=params["type"])
+            """Respond to WebRTC offer and establish connection."""
+            request_body = await request.json()
 
-            pc = RTCPeerConnection()
+            # Request body must contain `sdp` and `type`. Return 400 bad request
+            # if not present
+            if request_body['sdp'] is None or request_body['type'] is None:
+                return web.Response(status=400)
 
-            self._pipe.send(LogMessage(
-                f"WebRTC connection created for {request.remote}"))
-            
-            @pc.on("datachannel")
-            def on_datachannel(channel):
-                @channel.on("message")
-                def on_message(message):
-                    if isinstance(message, str) and message.startswith("ping"):
-                        self._pipe.send(LogMessage(
-                            f"Received message: {message}", level=logging.DEBUG))
-                        
-                        channel.send("pong" + message[4:])
+            video_stream = WebRTCVideoStream(
+                request_body['sdp'], request_body['type'])
 
-            @pc.on("connectionstatechange")
-            async def on_connectionstatechange():
+            @video_stream.on("datachannelmessage")
+            def on_datachannelmessage(message: str):
                 self._pipe.send(LogMessage(
-                    f"Connection state change: {pc.connectionState}", level=logging.DEBUG))
+                    f"Received message: {message}", level=logging.DEBUG))
 
-                if pc.connectionState == "failed":
-                    await pc.close()
-
-            @pc.on("track")
-            def on_track(track):
-                if track.kind != 'video':
-                    self._pipe.send(LogMessage(
-                        f"Invalid track type {track.kind}", level=logging.ERROR))
-                    return
-
-                self._pipe.send(LogMessage(
-                    f"Received new video track", level=logging.DEBUG))
-
+            @video_stream.on("newtrack")
+            def on_newtrack(track: MediaStreamTrack):
+                self._pipe.send(LogMessage(f"Received new video track", level=logging.DEBUG))
                 webcam_video_stream = VirtualCam(track)
 
-                @track.on("ended")
-                async def on_ended():
-                    self._pipe.send(LogMessage(
-                        "Track ended", level=logging.DEBUG))
+            @video_stream.on("closed")
+            def on_closed():
+                self._pipe.send(LogMessage("Video stream closed"))
 
-            # handle offer
-            await pc.setRemoteDescription(offer)
-
-            # send answer
-            answer = await pc.createAnswer()
-            await pc.setLocalDescription(answer)
+            answer = await video_stream.acknowledge()
 
             return web.Response(
                 content_type="application/json",
-                text=json.dumps(
-                    {"sdp": pc.localDescription.sdp,
-                        "type": pc.localDescription.type}
-                ),
-            )
+                text=answer)
 
         @self.routes.get(r'/{filename:.+}')
         async def static(request: Request):
