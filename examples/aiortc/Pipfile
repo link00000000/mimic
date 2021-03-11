@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 aiohttp = "*"
 aiortc = "*"
+numpy = "*"
 
 [dev-packages]
 

@@ -82,7 +82,7 @@ async function negotiate(peerConnection) {
     await waitForIce(peerConnection)
 
     const localDescription = peerConnection.localDescription
-    const response = await fetch('/offer', {
+    const response = await fetch('/webrtc-offer', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

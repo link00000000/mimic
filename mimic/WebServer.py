@@ -1,5 +1,7 @@
 """HTTP web server."""
 import asyncio
+import json
+import logging
 import os
 import ssl
 from mimetypes import MimeTypes
@@ -9,10 +11,12 @@ from typing import Any, Callable, Coroutine, Optional
 from aiohttp import web
 from aiohttp.web_app import Application
 from aiohttp.web_request import Request
+from aiortc import RTCPeerConnection, RTCSessionDescription
 
 from mimic.Pipeable import LogMessage, Pipeable
 from mimic.Utils.Host import resolve_host
 from mimic.Utils.SSL import generate_ssl_certs, ssl_certs_generated
+from mimic.VirtualCam import VirtualCam
 
 middleware = Callable[[Request, Any], Coroutine[Any, Any, Any]]
 mimetypes = MimeTypes()
@@ -75,6 +79,67 @@ class WebServer(Pipeable):
                 content = file.read()
 
             return web.Response(content_type="text/html", text=content)
+
+        @self.routes.post('/webrtc-offer')
+        async def webrtc_offer(request: Request):
+            params = await request.json()
+            offer = RTCSessionDescription(
+                sdp=params["sdp"], type=params["type"])
+
+            pc = RTCPeerConnection()
+
+            self._pipe.send(LogMessage(
+                f"WebRTC connection created for {request.remote}"))
+            
+            @pc.on("datachannel")
+            def on_datachannel(channel):
+                @channel.on("message")
+                def on_message(message):
+                    if isinstance(message, str) and message.startswith("ping"):
+                        self._pipe.send(LogMessage(
+                            f"Received message: {message}", level=logging.DEBUG))
+                        
+                        channel.send("pong" + message[4:])
+
+            @pc.on("connectionstatechange")
+            async def on_connectionstatechange():
+                self._pipe.send(LogMessage(
+                    f"Connection state change: {pc.connectionState}", level=logging.DEBUG))
+
+                if pc.connectionState == "failed":
+                    await pc.close()
+
+            @pc.on("track")
+            def on_track(track):
+                if track.kind != 'video':
+                    self._pipe.send(LogMessage(
+                        f"Invalid track type {track.kind}", level=logging.ERROR))
+                    return
+
+                self._pipe.send(LogMessage(
+                    f"Received new video track", level=logging.DEBUG))
+
+                webcam_video_stream = VirtualCam(track)
+
+                @track.on("ended")
+                async def on_ended():
+                    self._pipe.send(LogMessage(
+                        "Track ended", level=logging.DEBUG))
+
+            # handle offer
+            await pc.setRemoteDescription(offer)
+
+            # send answer
+            answer = await pc.createAnswer()
+            await pc.setLocalDescription(answer)
+
+            return web.Response(
+                content_type="application/json",
+                text=json.dumps(
+                    {"sdp": pc.localDescription.sdp,
+                        "type": pc.localDescription.type}
+                ),
+            )
 
         @self.routes.get(r'/{filename:.+}')
         async def static(request: Request):
