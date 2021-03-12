@@ -106,8 +106,8 @@ class WebServer(Pipeable):
                 self._pipe.send(LogMessage(
                     f"Video metadata: {metadata.width}x{metadata.height} @ {metadata.framerate} FPS", level=logging.DEBUG))
 
-            @video_stream.events.on("latency")
-            def on_latency(latency: int):
+            @video_stream.events.on("ping")
+            def on_ping(latency: int):
                 self._pipe.send(LogMessage(
                     f"Latency {latency}ms", level=logging.DEBUG))
 

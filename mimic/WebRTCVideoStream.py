@@ -17,7 +17,7 @@ class WebRTCVideoStream():
 
     The following events are emitted and can be listened to using the `events` property:
     - "metadata" (metadata: VideoStreamMetadata): When video metadata is received
-    - "latency" (latency: int): The current latency of the connection in milliseconds
+    - "ping" (latency: int): The current latency of the connection in milliseconds
     - "newtrack" (track: MediaStreamTrack): When a new video track is registered to the RTC connection
     - "closed": When the video stream ends or the RTC connection is closed
 
@@ -77,7 +77,7 @@ class WebRTCVideoStream():
                         # connection and should be ignored
                         if message_timestamp != -1:
                             self.events.emit(
-                                "latency", latency(message_timestamp))
+                                "ping", latency(message_timestamp))
 
                         # Wait before sending another ping so we aren't spamming
                         # the connection
