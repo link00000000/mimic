@@ -81,7 +81,7 @@ class WebRTCVideoStream():
 
                         # Wait before sending another ping so we aren't spamming
                         # the connection
-                        await asyncio.sleep(5)
+                        await asyncio.sleep(1)
                         channel.send(str(timestamp()))
 
         @self.peer_connection.on("connectionstatechange")
