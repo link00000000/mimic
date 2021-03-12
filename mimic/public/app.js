@@ -299,6 +299,9 @@ async function main() {
         track.getSettings().height,
         track.getSettings().frameRate
     )
+
+    // Hide the loading spinner
+    document.getElementById('spinner').classList.remove('show')
 }
 
 main().catch((error) => alert(error))
