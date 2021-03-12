@@ -38,7 +38,7 @@ class WebRTCVideoStream():
                 self.events.emit("closed")
 
         @self.peer_connection.on("track")
-        def on_track(track):
+        def on_track(track: MediaStreamTrack):
             if track.kind != 'video':
                 return
 
