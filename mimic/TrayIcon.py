@@ -56,7 +56,7 @@ class TrayIcon(Pipeable):
         self._icon = SysTrayIcon(
             self._icon_image, self._hover_text, tuple(self._menu_options), on_quit=self.handle_quit)
 
-        self._thread = Thread(target=self._loop)
+        self._thread = Thread(target=self._loop, name="Tray-Icon")
         self._thread.start()
 
     def handle_quit(self, icon: SysTrayIcon):
