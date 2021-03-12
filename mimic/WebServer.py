@@ -108,7 +108,8 @@ class WebServer(Pipeable):
 
             @video_stream.events.on("latency")
             def on_latency(latency: int):
-                self._pipe.send(LogMessage(f"Latency {latency}ms", level=logging.DEBUG))
+                self._pipe.send(LogMessage(
+                    f"Latency {latency}ms", level=logging.DEBUG))
 
             @video_stream.events.on("newtrack")
             async def on_newtrack(track: MediaStreamTrack):
