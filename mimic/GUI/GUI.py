@@ -1,9 +1,10 @@
 """Main GUI entrypoint."""
 import tkinter as tk
 
+from pyee import BaseEventEmitter
+
 from mimic.GUI.DebugLogWindow import DebugLogWindow
 from mimic.GUI.MainWindow import MainWindow
-from pyee import BaseEventEmitter
 
 
 class GUI(tk.Tk):

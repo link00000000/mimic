@@ -3,6 +3,7 @@ import winreg
 
 REG_PATH = r"CLSID\{860BB310-5D01-11d0-BD3B-00A0C911CE86}\Instance\{27B05C2D-93DC-474A-A5DA-9BBA34CB2A9C}"
 
+
 def change_webcam_name(name: str = 'Mimic'):
     """
     Change the name associated with the camera by accessing its registry.

@@ -1,10 +1,11 @@
 """Mimic main window."""
 import tkinter as tk
 
+from pyee import BaseEventEmitter
+
 from mimic.GUI.AbstractTkinterWindow import AbstractTkinterWindow
 from mimic.GUI.Widgets.QRCode import QRCodeImage
 from mimic.Utils.Host import resolve_host
-from pyee import BaseEventEmitter
 
 
 class MainWindow(AbstractTkinterWindow):
