@@ -5,17 +5,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Python: Project",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "program": "${workspaceFolder}/main.py",
             "console": "integratedTerminal",
-            "args": [
-                "--cert-file",
-                "${fileDirname}/certs/selfsigned.cert",
-                "--key-file",
-                "${fileDirname}/certs/selfsigned.pem"
-            ]
+            "args": []
         }
     ]
 }

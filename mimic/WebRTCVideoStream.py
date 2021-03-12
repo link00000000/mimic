@@ -3,12 +3,14 @@ import asyncio
 import json
 
 from aiortc import RTCPeerConnection
-from aiortc.mediastreams import MediaStreamTrack
 from aiortc.rtcdatachannel import RTCDataChannel
+from aiortc.rtcrtpreceiver import RemoteStreamTrack
 from aiortc.rtcsessiondescription import RTCSessionDescription
 from pyee import AsyncIOEventEmitter
 
-from mimic.Utils.Time import latency, timestamp
+from mimic.Utils.Time import RollingTimeout, latency, timestamp
+
+_DEAD_CONNECTION_TIMEOUT_SECONDS = 5
 
 
 class WebRTCVideoStream():
@@ -33,6 +35,11 @@ class WebRTCVideoStream():
 
     peer_connection: RTCPeerConnection
     events = AsyncIOEventEmitter()
+    rtc_heartbeat_timeout: RollingTimeout
+
+    tracks: list[RemoteStreamTrack] = []
+
+    __closed = True
 
     def __init__(self, sdp: str, type: str):
         """
@@ -46,6 +53,34 @@ class WebRTCVideoStream():
         """
         self.sdp = sdp
         self.type = type
+
+        print("Constructed")
+
+        async def on_heartbeat_timeout_expired():
+            if self.peer_connection is None:
+                return
+
+            await self.close()
+
+        self.rtc_heartbeat_timeout = RollingTimeout(
+            _DEAD_CONNECTION_TIMEOUT_SECONDS, on_heartbeat_timeout_expired)
+
+    def __del__(self):
+        print("Destructed")
+
+    def is_open(self) -> bool:
+        return not self.__closed
+
+    async def close(self):
+        if not self.__closed:
+            self.__closed = True
+            self.events.emit("closed")
+
+        for track in self.tracks:
+            track.stop()
+            del track
+
+        await self.peer_connection.close()
 
     async def acknowledge(self) -> str:
         """
@@ -74,8 +109,12 @@ class WebRTCVideoStream():
                         message_timestamp = int(message)
 
                         # If the client sends a -1, then it is the initial
-                        # connection and should be ignored
-                        if message_timestamp != -1:
+                        # connection
+                        if message_timestamp == -1:
+                            self.rtc_heartbeat_timeout.start()
+                        else:
+                            self.rtc_heartbeat_timeout.rollback()
+
                             self.events.emit(
                                 "ping", latency(message_timestamp))
 
@@ -86,20 +125,25 @@ class WebRTCVideoStream():
 
         @self.peer_connection.on("connectionstatechange")
         async def on_connectionstatechange():
-            if self.peer_connection.connectionState == "failed":
-                await self.peer_connection.close()
-                self.events.emit("closed")
+            if self.peer_connection.connectionState == "connected":
+                self.__closed = False
+
+            elif self.peer_connection.connectionState == "failed":
+                await self.close()
 
         @self.peer_connection.on("track")
-        def on_track(track: MediaStreamTrack):
+        def on_track(track: RemoteStreamTrack):
             if track.kind != 'video':
+                track.stop()
                 return
 
-            self.events.emit("newtrack", track)
+            self.tracks.append(track)
 
             @track.on("ended")
             async def on_ended():
-                self.events.emit("closed")
+                await self.close()
+
+            self.events.emit("newtrack", track)
 
         # handle offer
         await self.peer_connection.setRemoteDescription(offer)

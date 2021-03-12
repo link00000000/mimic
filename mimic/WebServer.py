@@ -10,9 +10,9 @@ from typing import Any, Callable, Coroutine, Optional
 from aiohttp import web
 from aiohttp.web_app import Application
 from aiohttp.web_request import Request
-from aiortc import MediaStreamTrack
-from aiortc.mediastreams import VideoStreamTrack
-from aiortc.rtcdatachannel import RTCDataChannel
+from aiortc.mediastreams import MediaStreamError
+from aiortc.rtcpeerconnection import RTCPeerConnection
+from aiortc.rtcrtpreceiver import RemoteStreamTrack
 
 from mimic.Pipeable import LogMessage, Pipeable
 from mimic.Utils.Host import resolve_host
@@ -47,7 +47,7 @@ class WebServer(Pipeable):
     runner: web.AppRunner
     site: web.TCPSite
 
-    video_stream_connected = False
+    video_stream: Optional[WebRTCVideoStream] = None
 
     def __init__(self, host: str = resolve_host(), port=8080, stop_event: Event = None):
         """
@@ -94,39 +94,46 @@ class WebServer(Pipeable):
                 return web.Response(status=400)
 
             # Don't allow multiple connections at the same time
-            if self.video_stream_connected:
-                return web.Response(status=409)
+            if self.video_stream is not None:
+                return web.Response(
+                    text="Only one connection allowed at a time, try again later", status=409)
 
-            self.video_stream_connected = True
-            video_stream = WebRTCVideoStream(
+            self.video_stream = WebRTCVideoStream(
                 request_body['sdp'], request_body['type'])
 
-            @video_stream.events.on("metadata")
+            @self.video_stream.events.on("metadata")
             def on_metadata(metadata: VideoStreamMetadata):
                 self._pipe.send(LogMessage(
                     f"Video metadata: {metadata.width}x{metadata.height} @ {metadata.framerate} FPS", level=logging.DEBUG))
 
-            @video_stream.events.on("ping")
+            @self.video_stream.events.on("ping")
             def on_ping(latency: int):
                 self._pipe.send(LogMessage(
                     f"Latency {latency}ms", level=logging.DEBUG))
 
-            @video_stream.events.on("newtrack")
-            async def on_newtrack(track: MediaStreamTrack):
+            @self.video_stream.events.on("newtrack")
+            async def on_newtrack(track: RemoteStreamTrack):
                 self._pipe.send(LogMessage(
                     f"Received new video track", level=logging.DEBUG))
 
-                while self.video_stream_connected:
-                    frame = await track.recv()
-                    print("FRAME")
-                    # @TODO Send frames to pyvirtualcam
+                while self.video_stream is not None:
+                    try:
+                        frame = await track.recv()
+                        print("FRAME")
+                        # @TODO Send frames to pyvirtualcam
 
-            @video_stream.events.on("closed")
+                    except MediaStreamError:
+                        self._pipe.send(LogMessage(
+                            "Received empty frame, connection was probably closed by remote."))
+
+            @self.video_stream.events.on("closed")
             def on_closed():
                 self._pipe.send(LogMessage("Video stream closed"))
-                self.video_stream_connected = False
+                del self.video_stream
+                self.video_stream = None
+                print("DEST")
 
-            answer = await video_stream.acknowledge()
+            answer = await self.video_stream.acknowledge()
 
             return web.Response(
                 content_type="application/json",
