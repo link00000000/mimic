@@ -11,6 +11,7 @@ from aiohttp import web
 from aiohttp.web_app import Application
 from aiohttp.web_request import Request
 from aiortc import MediaStreamTrack
+from aiortc.rtcdatachannel import RTCDataChannel
 
 from mimic.Pipeable import LogMessage, Pipeable
 from mimic.Utils.Host import resolve_host
@@ -100,9 +101,9 @@ class WebServer(Pipeable):
                 request_body['sdp'], request_body['type'])
 
             @video_stream.events.on("datachannelmessage")
-            def on_datachannelmessage(message: str):
+            def on_datachannelmessage(message: str, channel: RTCDataChannel):
                 self._pipe.send(LogMessage(
-                    f"Received message: {message}", level=logging.DEBUG))
+                    f"Received message: {message} on channel {channel.label}", level=logging.DEBUG))
 
             @video_stream.events.on("newtrack")
             async def on_newtrack(track: MediaStreamTrack):

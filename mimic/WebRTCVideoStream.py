@@ -23,11 +23,11 @@ class WebRTCVideoStream():
         self.peer_connection = RTCPeerConnection()
 
         @self.peer_connection.on("datachannel")
-        def on_datachannel(channel):
+        def on_datachannel(channel: RTCDataChannel):
             @channel.on("message")
             def on_message(message):
                 if isinstance(message, str) and message.startswith("ping"):
-                    self.events.emit("datachannelmessage", message)
+                    self.events.emit("datachannelmessage", message, channel)
 
                     channel.send("pong" + message[4:])
 
