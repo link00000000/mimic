@@ -141,7 +141,6 @@ class MetadataDataChannel {
 
         this.dataChannel.onopen = this.onOpen.bind(this)
         this.dataChannel.onclose = this.onClose.bind(this)
-        this.dataChannel.onmessage = this.onMessage.bind(this)
     }
 
     waitForOpen() {
@@ -170,10 +169,6 @@ class MetadataDataChannel {
         debugLog('Metadata Data Channel', '- close')
     }
 
-    onMessage(event) {
-        debugLog('Metadata Data Channel', '< ' + event.data)
-    }
-
     sendMetadata(width, height, framerate) {
         const payload = JSON.stringify({ width, height, framerate })
 
@@ -182,9 +177,39 @@ class MetadataDataChannel {
     }
 }
 
+class LatencyDataChannel {
+    dataChannel = null
+
+    constructor(peerConnection) {
+        this.dataChannel = peerConnection.createDataChannel('latency', {
+            ordered: true
+        })
+
+        this.dataChannel.onopen = this.onOpen.bind(this)
+        this.dataChannel.onclose = this.onClose.bind(this)
+        this.dataChannel.onmessage = this.onMessage.bind(this)
+    }
+
+    onOpen() {
+        debugLog('Latency Data Channel', '- open')
+        debugLog('Latency Data Channel', '> -1')
+        this.dataChannel.send('-1')
+    }
+
+    onClose() {
+        debugLog('Latency Data Channel', '- close')
+    }
+
+    onMessage(event) {
+        debugLog('Latency Data Channel', '> ' + event.data)
+        this.dataChannel.send(event.data)
+        debugLog('Latency Data Channel', '< ' + event.data)
+    }
+}
+
 async function main() {
     const peerConnection = createPeerConnection()
-        // const pingPong = new PingPongDataChannel(peerConnection)
+    const latencyDataChannel = new LatencyDataChannel(peerConnection)
     const metadataDataChannel = new MetadataDataChannel(peerConnection)
 
     const mediaStream = await getMedia({

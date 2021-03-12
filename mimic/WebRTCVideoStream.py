@@ -1,4 +1,5 @@
 """Establish a video stream using WebRTC."""
+import asyncio
 import json
 
 from aiortc import RTCPeerConnection
@@ -7,6 +8,8 @@ from aiortc.rtcdatachannel import RTCDataChannel
 from aiortc.rtcsessiondescription import RTCSessionDescription
 from pyee import AsyncIOEventEmitter
 
+from mimic.Utils.Time import latency, timestamp
+
 
 class WebRTCVideoStream():
     """
@@ -14,6 +17,7 @@ class WebRTCVideoStream():
 
     The following events are emitted and can be listened to using the `events` property:
     - "metadata" (metadata: VideoStreamMetadata): When video metadata is received
+    - "latency" (latency: int): The current latency of the connection in milliseconds
     - "newtrack" (track: MediaStreamTrack): When a new video track is registered to the RTC connection
     - "closed": When the video stream ends or the RTC connection is closed
 
@@ -58,12 +62,27 @@ class WebRTCVideoStream():
         @self.peer_connection.on("datachannel")
         def on_datachannel(channel: RTCDataChannel):
             @channel.on("message")
-            def on_message(message):
+            async def on_message(message):
                 if isinstance(message, str):
                     if channel.label == "metadata":
+                        # Parse video stream metadata into structured class
                         metadata_json = json.loads(message)
                         self.events.emit("metadata", VideoStreamMetadata(
                             metadata_json['width'], metadata_json['height'], metadata_json['framerate']))
+
+                    elif channel.label == "latency":
+                        message_timestamp = int(message)
+
+                        # If the client sends a -1, then it is the initial
+                        # connection and should be ignored
+                        if message_timestamp != -1:
+                            self.events.emit(
+                                "latency", latency(message_timestamp))
+
+                        # Wait before sending another ping so we aren't spamming
+                        # the connection
+                        await asyncio.sleep(5)
+                        channel.send(str(timestamp()))
 
         @self.peer_connection.on("connectionstatechange")
         async def on_connectionstatechange():
