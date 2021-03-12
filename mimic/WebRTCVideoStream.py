@@ -2,16 +2,15 @@ import json
 
 from aiortc import RTCPeerConnection
 from aiortc.rtcsessiondescription import RTCSessionDescription
-
-from mimic.EventEmitter import EventEmitter
-from mimic.VirtualCam import VirtualCam
+from pyee import AsyncIOEventEmitter
 
 
-class WebRTCVideoStream(EventEmitter):
+class WebRTCVideoStream():
     sdp: str
     type: str
 
     peer_connection: RTCPeerConnection
+    events = AsyncIOEventEmitter()
 
     def __init__(self, sdp: str, type: str):
         self.sdp = sdp
@@ -28,7 +27,7 @@ class WebRTCVideoStream(EventEmitter):
             @channel.on("message")
             def on_message(message):
                 if isinstance(message, str) and message.startswith("ping"):
-                    self._emit("datachannelmessage", message)
+                    self.events.emit("datachannelmessage", message)
 
                     channel.send("pong" + message[4:])
 
@@ -36,18 +35,18 @@ class WebRTCVideoStream(EventEmitter):
         async def on_connectionstatechange():
             if self.peer_connection.connectionState == "failed":
                 await self.peer_connection.close()
-                self._emit("closed")
+                self.events.emit("closed")
 
         @self.peer_connection.on("track")
         def on_track(track):
             if track.kind != 'video':
                 return
 
-            self._emit("newtrack", track)
+            self.events.emit("newtrack", track)
 
             @track.on("ended")
             async def on_ended():
-                self._emit("closed")
+                self.events.emit("closed")
 
         # handle offer
         await self.peer_connection.setRemoteDescription(offer)

@@ -1,16 +1,17 @@
 """Mimic main window."""
 import tkinter as tk
 
-from mimic.EventEmitter import EventEmitter
 from mimic.GUI.AbstractTkinterWindow import AbstractTkinterWindow
 from mimic.GUI.Widgets.QRCode import QRCodeImage
 from mimic.Utils.Host import resolve_host
+from pyee import BaseEventEmitter
 
 
-class MainWindow(AbstractTkinterWindow, EventEmitter):
+class MainWindow(AbstractTkinterWindow):
     """Mimic main window."""
 
     widgets: list[tk.Widget] = []
+    events = BaseEventEmitter()
 
     def __init__(self, master: tk.Tk):
         """
@@ -44,4 +45,4 @@ class MainWindow(AbstractTkinterWindow, EventEmitter):
         a `quit` event.
         """
         self.master.destroy()
-        self._emit("quit")
+        self.events.emit("quit")

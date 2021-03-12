@@ -76,7 +76,7 @@ def main():
 
     gui = GUI()
 
-    @gui.on('quit')
+    @gui.events.on('quit')
     def on_gui_quit():
         stop_event.set()
 

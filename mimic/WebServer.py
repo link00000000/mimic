@@ -15,7 +15,6 @@ from aiortc import MediaStreamTrack
 from mimic.Pipeable import LogMessage, Pipeable
 from mimic.Utils.Host import resolve_host
 from mimic.Utils.SSL import generate_ssl_certs, ssl_certs_generated
-from mimic.VirtualCam import VirtualCam
 from mimic.WebRTCVideoStream import WebRTCVideoStream
 
 middleware = Callable[[Request, Any], Coroutine[Any, Any, Any]]
@@ -45,6 +44,8 @@ class WebServer(Pipeable):
 
     runner: web.AppRunner
     site: web.TCPSite
+
+    video_stream_connected = False
 
     def __init__(self, host: str = resolve_host(), port=8080, stop_event: Event = None):
         """
@@ -90,22 +91,32 @@ class WebServer(Pipeable):
             if request_body['sdp'] is None or request_body['type'] is None:
                 return web.Response(status=400)
 
+            # Don't allow multiple connections at the same time
+            if self.video_stream_connected:
+                return web.Response(status=409)
+
+            self.video_stream_connected = True
             video_stream = WebRTCVideoStream(
                 request_body['sdp'], request_body['type'])
 
-            @video_stream.on("datachannelmessage")
+            @video_stream.events.on("datachannelmessage")
             def on_datachannelmessage(message: str):
                 self._pipe.send(LogMessage(
                     f"Received message: {message}", level=logging.DEBUG))
 
-            @video_stream.on("newtrack")
-            def on_newtrack(track: MediaStreamTrack):
-                self._pipe.send(LogMessage(f"Received new video track", level=logging.DEBUG))
-                webcam_video_stream = VirtualCam(track)
+            @video_stream.events.on("newtrack")
+            async def on_newtrack(track: MediaStreamTrack):
+                self._pipe.send(LogMessage(
+                    f"Received new video track", level=logging.DEBUG))
 
-            @video_stream.on("closed")
+                while self.video_stream_connected:
+                    frame = await track.recv()
+                    # @TODO Send frames to pyvirtualcam
+
+            @video_stream.events.on("closed")
             def on_closed():
                 self._pipe.send(LogMessage("Video stream closed"))
+                self.video_stream_connected = False
 
             answer = await video_stream.acknowledge()
 

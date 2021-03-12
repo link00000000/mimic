@@ -1,17 +1,20 @@
 """Main GUI entrypoint."""
 import tkinter as tk
 
-from mimic.EventEmitter import EventEmitter
 from mimic.GUI.DebugLogWindow import DebugLogWindow
 from mimic.GUI.MainWindow import MainWindow
+from pyee import BaseEventEmitter
 
 
-class GUI(tk.Tk, EventEmitter):
+class GUI(tk.Tk):
     """Main Tkinter user interface instance."""
+
+    events = BaseEventEmitter()
 
     def __init__(self):
         """Initialize main Tkinter user interface instance."""
         super().__init__()
+        super(BaseEventEmitter).__init__()
 
         self.create_windows()
 
@@ -25,3 +28,7 @@ class GUI(tk.Tk, EventEmitter):
         """Initialize all child windows."""
         self.debug_log_window = DebugLogWindow(self)
         self.main_window = MainWindow(self)
+
+        @self.main_window.events.on('quit')
+        def on_quit():
+            self.events.emit('quit')

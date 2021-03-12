@@ -13,6 +13,7 @@ pythonlangutil = "*"
 "infi.systray" = "*"
 pyqrcode = "*"
 pyopenssl = "*"
+pyee = "*"
 
 [dev-packages]
 autopep8 = "*"
