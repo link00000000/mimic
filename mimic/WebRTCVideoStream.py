@@ -1,17 +1,4 @@
-"""
-Establish a video stream using WebRTC.
-
-The following events are emitted and can be listened to using the `events` property:
-- "datachannelmessage" (message: str, channel: RTCDataChannel): When a string message is sent across any data channel
-- "newtrack" (track: MediaStreamTrack): When a new video track is registered to the RTC connection
-- "closed": When the video stream ends or the RTC connection is closed
-
->>> video_stream = WebRTCVideoStream(sdp, type)
->>>
->>> @video_stream.events.on("datachannelmessage")
->>> def on_datachannelmessage(message, channel: RTCDataChannel):
->>>     print(f"Got message | Channel Name: {channel.label}, Message: {message}")
-"""
+"""Establish a video stream using WebRTC."""
 import json
 
 from aiortc import RTCPeerConnection
@@ -26,15 +13,15 @@ class WebRTCVideoStream():
     Establish a video stream using WebRTC.
 
     The following events are emitted and can be listened to using the `events` property:
-    - "datachannelmessage" (message: str, channel: RTCDataChannel): When a string message is sent across any data channel
+    - "metadata" (metadata: VideoStreamMetadata): When video metadata is received
     - "newtrack" (track: MediaStreamTrack): When a new video track is registered to the RTC connection
     - "closed": When the video stream ends or the RTC connection is closed
 
     >>> video_stream = WebRTCVideoStream(sdp, type)
     >>>
-    >>> @video_stream.events.on("datachannelmessage")
-    >>> def on_datachannelmessage(message, channel: RTCDataChannel):
-    >>>     print(f"Got message | Channel Name: {channel.label}, Message: {message}")
+    >>> @video_stream.events.on("newtrack")
+    >>> def on_newtrack(track: MediaStreamTrack):
+    >>>     print("Got track")
     """
 
     sdp: str
@@ -72,10 +59,11 @@ class WebRTCVideoStream():
         def on_datachannel(channel: RTCDataChannel):
             @channel.on("message")
             def on_message(message):
-                if isinstance(message, str) and message.startswith("ping"):
-                    self.events.emit("datachannelmessage", message, channel)
-
-                    channel.send("pong" + message[4:])
+                if isinstance(message, str):
+                    if channel.label == "metadata":
+                        metadata_json = json.loads(message)
+                        self.events.emit("metadata", VideoStreamMetadata(
+                            metadata_json['width'], metadata_json['height'], metadata_json['framerate']))
 
         @self.peer_connection.on("connectionstatechange")
         async def on_connectionstatechange():
@@ -105,3 +93,20 @@ class WebRTCVideoStream():
             {"sdp": self.peer_connection.localDescription.sdp,
              "type": self.peer_connection.localDescription.type}
         )
+
+
+class VideoStreamMetadata():
+    """Video stream resolution and framerate."""
+
+    def __init__(self, width: int, height: int, framerate: int):
+        """
+        Structure metadata about video stream.
+
+        Args:
+            width (int): Video stream width in pixels
+            height (int): Video stream height in pixels
+            framerate (int): Video stream framerate in frames per second
+        """
+        self.width = width
+        self.height = height
+        self.framerate = framerate

@@ -11,12 +11,13 @@ from aiohttp import web
 from aiohttp.web_app import Application
 from aiohttp.web_request import Request
 from aiortc import MediaStreamTrack
+from aiortc.mediastreams import VideoStreamTrack
 from aiortc.rtcdatachannel import RTCDataChannel
 
 from mimic.Pipeable import LogMessage, Pipeable
 from mimic.Utils.Host import resolve_host
 from mimic.Utils.SSL import generate_ssl_certs, ssl_certs_generated
-from mimic.WebRTCVideoStream import WebRTCVideoStream
+from mimic.WebRTCVideoStream import VideoStreamMetadata, WebRTCVideoStream
 
 middleware = Callable[[Request, Any], Coroutine[Any, Any, Any]]
 mimetypes = MimeTypes()
@@ -100,10 +101,10 @@ class WebServer(Pipeable):
             video_stream = WebRTCVideoStream(
                 request_body['sdp'], request_body['type'])
 
-            @video_stream.events.on("datachannelmessage")
-            def on_datachannelmessage(message: str, channel: RTCDataChannel):
+            @video_stream.events.on("metadata")
+            def on_metadata(metadata: VideoStreamMetadata):
                 self._pipe.send(LogMessage(
-                    f"Received message: {message} on channel {channel.label}", level=logging.DEBUG))
+                    f"Video metadata: {metadata.width}x{metadata.height} @ {metadata.framerate} FPS", level=logging.DEBUG))
 
             @video_stream.events.on("newtrack")
             async def on_newtrack(track: MediaStreamTrack):
@@ -112,6 +113,7 @@ class WebServer(Pipeable):
 
                 while self.video_stream_connected:
                     frame = await track.recv()
+                    print("FRAME")
                     # @TODO Send frames to pyvirtualcam
 
             @video_stream.events.on("closed")
