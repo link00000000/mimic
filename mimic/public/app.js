@@ -1,3 +1,8 @@
+/**
+ * Gets the media stream from the browser
+ * @param {MediaConstraints} constraints Media contraints defined by the MediaStream API
+ * @returns MediaStream
+ */
 async function getMedia(constraints) {
     try {
         return await navigator.mediaDevices.getUserMedia(constraints)
@@ -7,16 +12,27 @@ async function getMedia(constraints) {
     }
 }
 
+/**
+ * Send a debug message to the console
+ * @param {string} label Part of application that is making the call
+ * @param {string} message Message body
+ */
 function debugLog(label, message) {
     console.log(`${('[' + label + ']').padEnd(30)} ${message}`)
 }
 
+/**
+ * Creates an RTCPeerConnection with logging for debugging.
+ *
+ * @NOTE No connection has been established yet after this function call. The
+ * connection still needs to be negotiated with the server.
+ * @returns RTCPeerConnection
+ */
 function createPeerConnection() {
     const peerConnection = new RTCPeerConnection({
         sdpSemantics: 'unified-plan'
     })
 
-    // register some listeners to help debugging
     peerConnection.addEventListener(
         'icegatheringstatechange',
         function() {
@@ -53,6 +69,11 @@ function createPeerConnection() {
     return peerConnection
 }
 
+/**
+ * Asynchronously wait for ICE server gathering to complete
+ * @param {RTCPeerConnection} peerConnection Instance of `RTCPeerConnection`
+ * @returns Promise<void>
+ */
 function waitForIce(peerConnection) {
     return new Promise(function(resolve) {
         if (peerConnection.iceGatheringState === 'complete') {
@@ -75,6 +96,10 @@ function waitForIce(peerConnection) {
     })
 }
 
+/**
+ * Establish RTC connection with server
+ * @param {RTCPeerConnection} peerConnection Instance of `RTCPeerConnection`
+ */
 async function negotiate(peerConnection) {
     const offer = await peerConnection.createOffer()
     await peerConnection.setLocalDescription(offer)
@@ -97,10 +122,17 @@ async function negotiate(peerConnection) {
     await peerConnection.setRemoteDescription(answer)
 }
 
+/**
+ * Test data channel that sends ping/pong messages
+ */
 class PingPongDataChannel {
     interval = null
     dataChannel = null
 
+    /**
+     * Establish ping pong data channel over RTC peer connection
+     * @param {RTCPeerConnection} peerConnection Instance of `RTCPeerConnection` that has already been negotiated
+     */
     constructor(peerConnection) {
         this.dataChannel = peerConnection.createDataChannel('chat', {
             ordered: true
@@ -130,10 +162,17 @@ class PingPongDataChannel {
     }
 }
 
+/**
+ * Data channel that sends metadata about the video stream
+ */
 class MetadataDataChannel {
     dataChannel = null
     isOpen = false
 
+    /**
+     * Establish metadata data channel over RTC peer connection
+     * @param {RTCPeerConnection} peerConnection Instance of `RTCPeerConnection` that has already been negotiated
+     */
     constructor(peerConnection) {
         this.dataChannel = peerConnection.createDataChannel('metadata', {
             ordered: true
@@ -143,6 +182,10 @@ class MetadataDataChannel {
         this.dataChannel.onclose = this.onClose.bind(this)
     }
 
+    /**
+     * Asynchronously wait for connection to peer to be established
+     * @returns Promise<void>
+     */
     waitForOpen() {
         return new Promise((resolve) => {
             if (this.isOpen) {
@@ -177,9 +220,16 @@ class MetadataDataChannel {
     }
 }
 
+/**
+ * Data channel that measures latency over peer connection
+ */
 class LatencyDataChannel {
     dataChannel = null
 
+    /**
+     * Establish latency data channel over RTC peer connection
+     * @param {RTCPeerConnection} peerConnection Instance of `RTCPeerConnection` that has already been negotiated
+     */
     constructor(peerConnection) {
         this.dataChannel = peerConnection.createDataChannel('latency', {
             ordered: true
@@ -193,6 +243,10 @@ class LatencyDataChannel {
     onOpen() {
         debugLog('Latency Data Channel', '- open')
         debugLog('Latency Data Channel', '> -1')
+
+        // @NOTE It is important that the client sends an initial -1 value to
+        // the server. The server expects that the first message is a -1 and
+        // will start the latency polling loop after it is received.
         this.dataChannel.send('-1')
     }
 
@@ -217,6 +271,7 @@ async function main() {
         video: { width: 640, height: 360, frameRate: { ideal: 10, max: 15 } }
     })
 
+    // Render video preview to html video element
     let videoPreviewElement = document.getElementById('video-preview')
     videoPreviewElement.srcObject = mediaStream
 
@@ -230,11 +285,14 @@ async function main() {
         )
     }
 
+    // Bind video track to RTC connection
     const track = mediaStream.getTracks()[0]
     peerConnection.addTrack(track, mediaStream)
 
+    // Establish connection to server
     await negotiate(peerConnection)
 
+    // Send metadata to server after initial connection
     await metadataDataChannel.waitForOpen()
     metadataDataChannel.sendMetadata(
         track.getSettings().width,
