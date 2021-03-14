@@ -92,24 +92,24 @@ class WebServer(Pipeable):
             offer = RTCSessionDescription(
                 sdp=params["sdp"], type=params["type"])
 
-            pc = RTCPeerConnection()
-            self.peer_connections.add(pc)
+            peer_connection = RTCPeerConnection()
+            self.peer_connections.add(peer_connection)
 
-            @pc.on("datachannel")
+            @peer_connection.on("datachannel")
             def on_datachannel(channel):
                 @channel.on("message")
                 def on_message(message):
                     if isinstance(message, str) and message.startswith("ping"):
                         channel.send("pong" + message[4:])
 
-            @pc.on("connectionstatechange")
+            @peer_connection.on("connectionstatechange")
             async def on_connectionstatechange():
-                print("Connection state is", pc.connectionState)
-                if pc.connectionState == "failed":
-                    await pc.close()
-                    self.peer_connections.discard(pc)
+                print("Connection state is", peer_connection.connectionState)
+                if peer_connection.connectionState == "failed":
+                    await peer_connection.close()
+                    self.peer_connections.discard(peer_connection)
 
-            @pc.on("track")
+            @peer_connection.on("track")
             def on_track(track):
                 print(f"Track {track.kind} received")
 
@@ -123,17 +123,17 @@ class WebServer(Pipeable):
                     print(f"Track {track.kind} ended")
 
             # handle offer
-            await pc.setRemoteDescription(offer)
+            await peer_connection.setRemoteDescription(offer)
 
             # send answer
-            answer = await pc.createAnswer()
-            await pc.setLocalDescription(answer)
+            answer = await peer_connection.createAnswer()
+            await peer_connection.setLocalDescription(answer)
 
             return web.Response(
                 content_type="application/json",
                 text=json.dumps(
-                    {"sdp": pc.localDescription.sdp,
-                        "type": pc.localDescription.type}
+                    {"sdp": peer_connection.localDescription.sdp,
+                        "type": peer_connection.localDescription.type}
                 ),
             )
 
