@@ -28,6 +28,7 @@ SSL_KEY = "certs/selfsigned.pem"
 
 pcs = set()
 
+
 class WebServer(Pipeable):
     """
     Async HTTP server, messages can be recieved by polling `pipe`.
@@ -48,7 +49,7 @@ class WebServer(Pipeable):
     runner: web.AppRunner
     site: web.TCPSite
 
-    video_stream: Optional[WebRTCVideoStream] = None
+    is_connection_available = Event()  # Threadsafe boolean
 
     def __init__(self, host: str = resolve_host(), port=8080, stop_event: Event = None):
         """
@@ -65,6 +66,8 @@ class WebServer(Pipeable):
         self.port = port
 
         self.stop_event = stop_event
+
+        self.is_connection_available.set()
 
         @web.middleware
         async def loggerMiddleware(request: Request, handler):
@@ -86,8 +89,15 @@ class WebServer(Pipeable):
 
         @self.routes.post('/webrtc-offer')
         async def offer(request):
+            if not self.is_connection_available.wait(timeout=5.0):
+                # Executed if lock was not acquired within the time limit
+                return web.Response(status=509, text="Unable to acquire lock, resource busy.")
+
+            self.is_connection_available.clear()
+
             params = await request.json()
-            offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
+            offer = RTCSessionDescription(
+                sdp=params["sdp"], type=params["type"])
 
             pc = RTCPeerConnection()
             pc_id = f"PeerConnection({time.time() * 1000})"
@@ -111,7 +121,8 @@ class WebServer(Pipeable):
                 if pc.connectionState == "failed":
                     await pc.close()
                     pcs.discard(pc)
-                
+                    self.is_connection_available.set()
+
             @pc.on("track")
             def on_track(track):
                 log_info(f"Track {track.kind} received")
@@ -135,10 +146,10 @@ class WebServer(Pipeable):
             return web.Response(
                 content_type="application/json",
                 text=json.dumps(
-                    {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+                    {"sdp": pc.localDescription.sdp,
+                        "type": pc.localDescription.type}
                 ),
             )
-
 
         @self.routes.get(r'/{filename:.+}')
         async def static(request: Request):
