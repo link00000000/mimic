@@ -1,8 +1,9 @@
 """HTTP web server."""
 import asyncio
-import logging
+import json
 import os
 import ssl
+import time
 from mimetypes import MimeTypes
 from threading import Event
 from typing import Any, Callable, Coroutine, Optional
@@ -10,14 +11,13 @@ from typing import Any, Callable, Coroutine, Optional
 from aiohttp import web
 from aiohttp.web_app import Application
 from aiohttp.web_request import Request
-from aiortc.mediastreams import MediaStreamError
+from aiortc import RTCSessionDescription
 from aiortc.rtcpeerconnection import RTCPeerConnection
-from aiortc.rtcrtpreceiver import RemoteStreamTrack
 
 from mimic.Pipeable import LogMessage, Pipeable
 from mimic.Utils.Host import resolve_host
 from mimic.Utils.SSL import generate_ssl_certs, ssl_certs_generated
-from mimic.WebRTCVideoStream import VideoStreamMetadata, WebRTCVideoStream
+from mimic.WebRTCVideoStream import WebRTCVideoStream
 
 middleware = Callable[[Request, Any], Coroutine[Any, Any, Any]]
 mimetypes = MimeTypes()
@@ -26,6 +26,7 @@ mimetypes = MimeTypes()
 SSL_CERT = "certs/selfsigned.cert"
 SSL_KEY = "certs/selfsigned.pem"
 
+pcs = set()
 
 class WebServer(Pipeable):
     """
@@ -84,60 +85,60 @@ class WebServer(Pipeable):
             return web.Response(content_type="text/html", text=content)
 
         @self.routes.post('/webrtc-offer')
-        async def webrtc_offer(request: Request):
-            """Respond to WebRTC offer and establish connection."""
-            request_body = await request.json()
+        async def offer(request):
+            params = await request.json()
+            offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
-            # Request body must contain `sdp` and `type`. Return 400 bad request
-            # if not present
-            if request_body['sdp'] is None or request_body['type'] is None:
-                return web.Response(status=400)
+            pc = RTCPeerConnection()
+            pc_id = f"PeerConnection({time.time() * 1000})"
+            pcs.add(pc)
 
-            # Don't allow multiple connections at the same time
-            if self.video_stream is not None:
-                return web.Response(
-                    text="Only one connection allowed at a time, try again later", status=409)
+            def log_info(msg, *args):
+                print(pc_id, msg)
 
-            self.video_stream = WebRTCVideoStream(
-                request_body['sdp'], request_body['type'])
+            log_info("Created for", request.remote)
 
-            @self.video_stream.events.on("metadata")
-            def on_metadata(metadata: VideoStreamMetadata):
-                self._pipe.send(LogMessage(
-                    f"Video metadata: {metadata.width}x{metadata.height} @ {metadata.framerate} FPS", level=logging.DEBUG))
+            @pc.on("datachannel")
+            def on_datachannel(channel):
+                @channel.on("message")
+                def on_message(message):
+                    if isinstance(message, str) and message.startswith("ping"):
+                        channel.send("pong" + message[4:])
 
-            @self.video_stream.events.on("ping")
-            def on_ping(latency: int):
-                self._pipe.send(LogMessage(
-                    f"Latency {latency}ms", level=logging.DEBUG))
+            @pc.on("connectionstatechange")
+            async def on_connectionstatechange():
+                print("Connection state is", pc.connectionState)
+                if pc.connectionState == "failed":
+                    await pc.close()
+                    pcs.discard(pc)
+                
+            @pc.on("track")
+            def on_track(track):
+                log_info(f"Track {track.kind} received")
 
-            @self.video_stream.events.on("newtrack")
-            async def on_newtrack(track: RemoteStreamTrack):
-                self._pipe.send(LogMessage(
-                    f"Received new video track", level=logging.DEBUG))
+                if track.kind == "audio":
+                    print("Got audio track")
+                elif track.kind == "video":
+                    print(f"Got other track {track.kind}")
 
-                while self.video_stream is not None:
-                    try:
-                        frame = await track.recv()
-                        print("FRAME")
-                        # @TODO Send frames to pyvirtualcam
+                @track.on("ended")
+                async def on_ended():
+                    print(f"Track {track.kind} ended")
 
-                    except MediaStreamError:
-                        self._pipe.send(LogMessage(
-                            "Received empty frame, connection was probably closed by remote."))
+            # handle offer
+            await pc.setRemoteDescription(offer)
 
-            @self.video_stream.events.on("closed")
-            def on_closed():
-                self._pipe.send(LogMessage("Video stream closed"))
-                del self.video_stream
-                self.video_stream = None
-                print("DEST")
-
-            answer = await self.video_stream.acknowledge()
+            # send answer
+            answer = await pc.createAnswer()
+            await pc.setLocalDescription(answer)
 
             return web.Response(
                 content_type="application/json",
-                text=answer)
+                text=json.dumps(
+                    {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+                ),
+            )
+
 
         @self.routes.get(r'/{filename:.+}')
         async def static(request: Request):
