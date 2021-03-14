@@ -93,7 +93,6 @@ class WebServer(Pipeable):
                 sdp=params["sdp"], type=params["type"])
 
             pc = RTCPeerConnection()
-            pc_id = f"PeerConnection({time.time() * 1000})"
             self.peer_connections.add(pc)
 
             @pc.on("datachannel")
