@@ -26,8 +26,6 @@ mimetypes = MimeTypes()
 SSL_CERT = "certs/selfsigned.cert"
 SSL_KEY = "certs/selfsigned.pem"
 
-pcs = set()
-
 
 class WebServer(Pipeable):
     """
@@ -49,7 +47,7 @@ class WebServer(Pipeable):
     runner: web.AppRunner
     site: web.TCPSite
 
-    is_connection_available = Event()  # Threadsafe boolean
+    peer_connections: set[RTCPeerConnection] = set()
 
     def __init__(self, host: str = resolve_host(), port=8080, stop_event: Event = None):
         """
@@ -66,8 +64,6 @@ class WebServer(Pipeable):
         self.port = port
 
         self.stop_event = stop_event
-
-        self.is_connection_available.set()
 
         @web.middleware
         async def loggerMiddleware(request: Request, handler):
@@ -89,11 +85,8 @@ class WebServer(Pipeable):
 
         @self.routes.post('/webrtc-offer')
         async def offer(request):
-            if not self.is_connection_available.wait(timeout=5.0):
-                # Executed if lock was not acquired within the time limit
-                return web.Response(status=509, text="Unable to acquire lock, resource busy.")
-
-            self.is_connection_available.clear()
+            if len(self.peer_connections) != 0:
+                return web.Response(status=409, text="Active connection already in use.")
 
             params = await request.json()
             offer = RTCSessionDescription(
@@ -101,7 +94,7 @@ class WebServer(Pipeable):
 
             pc = RTCPeerConnection()
             pc_id = f"PeerConnection({time.time() * 1000})"
-            pcs.add(pc)
+            self.peer_connections.add(pc)
 
             def log_info(msg, *args):
                 print(pc_id, msg)
@@ -120,8 +113,7 @@ class WebServer(Pipeable):
                 print("Connection state is", pc.connectionState)
                 if pc.connectionState == "failed":
                     await pc.close()
-                    pcs.discard(pc)
-                    self.is_connection_available.set()
+                    self.peer_connections.discard(pc)
 
             @pc.on("track")
             def on_track(track):
