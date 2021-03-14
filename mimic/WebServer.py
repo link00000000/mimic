@@ -96,11 +96,6 @@ class WebServer(Pipeable):
             pc_id = f"PeerConnection({time.time() * 1000})"
             self.peer_connections.add(pc)
 
-            def log_info(msg, *args):
-                print(pc_id, msg)
-
-            log_info("Created for", request.remote)
-
             @pc.on("datachannel")
             def on_datachannel(channel):
                 @channel.on("message")
@@ -117,7 +112,7 @@ class WebServer(Pipeable):
 
             @pc.on("track")
             def on_track(track):
-                log_info(f"Track {track.kind} received")
+                print(f"Track {track.kind} received")
 
                 if track.kind == "audio":
                     print("Got audio track")
