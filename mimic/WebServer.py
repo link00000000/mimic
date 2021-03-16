@@ -147,7 +147,7 @@ class WebServer:
         await asyncio.gather(*coros)
         self.__peer_connections.clear()
 
-    async def start(self) -> None:
+    async def run(self) -> None:
         ssl_context = ssl.SSLContext()
         ssl_context.load_cert_chain(
             "./certs/selfsigned.cert", "./certs/selfsigned.pem")
@@ -178,4 +178,4 @@ def server_thread_runner(pipe: Connection, stop_event: Event) -> None:
 
     server = WebServer(pipe=pipe, stop_event=stop_event)
 
-    loop.run_until_complete(server.start())
+    loop.run_until_complete(server.run())
