@@ -5,6 +5,7 @@ import os
 import ssl
 from multiprocessing.connection import Connection
 from threading import Event
+from typing import Any, Callable, Coroutine
 
 from aiohttp import web
 from aiohttp.web_request import Request
@@ -14,11 +15,13 @@ from mimic.Pipeable import LogMessage
 from mimic.Utils.Host import resolve_host
 
 ROOT = os.path.abspath('mimic/public')
+middleware = Callable[[Request, Any], Coroutine[Any, Any, Any]]
 
 
 class WebServer:
     __pcs: set[RTCPeerConnection] = set()
     __routes = web.RouteTableDef()
+    __middlewares: list[middleware] = []
 
     def __init__(self, host=resolve_host(), port=8080, pipe: Connection = None, stop_event=Event()) -> None:
         self.__host = host
@@ -26,31 +29,29 @@ class WebServer:
         self.__pipe = pipe
         self.__stop_event = stop_event
 
+        @self.__middleware
+        @web.middleware
+        async def loggerMiddleware(request: Request, handler):
+            self.__log(f"{request.method} {request.path} - {request.remote}")
+            return await handler(request)
+
         @self.__routes.get('/')
         async def index(request):
-            self.__log("GET /")
-
             content = open(os.path.join(ROOT, "index.html"), "r").read()
             return web.Response(content_type="text/html", text=content)
 
         @self.__routes.get('/app.js')
         async def javascript(request):
-            self.__log("GET /app.js")
-
             content = open(os.path.join(ROOT, "app.js"), "r").read()
             return web.Response(content_type="application/javascript", text=content)
 
         @self.__routes.get('/app.css')
         async def css(request):
-            self.__log("GET /app.css")
-
             content = open(os.path.join(ROOT, "app.css"), "r").read()
             return web.Response(content_type="text/css", text=content)
 
         @self.__routes.get('/close')
         async def close_connection(request: Request):
-            self.__log("GET /close")
-
             for pc in self.__pcs:
                 await pc.close()
 
@@ -119,6 +120,10 @@ class WebServer:
         else:
             self.__pipe.send(LogMessage(message, level))
 
+    def __middleware(self, func: Callable):
+        self.__middlewares.append(func)
+        return func
+
     async def __on_shutdown(self):
         # close peer connections
         coros = [pc.close() for pc in self.__pcs]
@@ -130,7 +135,7 @@ class WebServer:
         ssl_context.load_cert_chain(
             "./certs/selfsigned.cert", "./certs/selfsigned.pem")
 
-        app = web.Application()
+        app = web.Application(middlewares=self.__middlewares)
         app.router.add_routes(self.__routes)
 
         runner = web.AppRunner(app, handle_signals=True)
