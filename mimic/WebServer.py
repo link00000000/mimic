@@ -18,9 +18,12 @@ from aiortc.rtcdatachannel import RTCDataChannel
 
 from mimic.Pipeable import LogMessage
 from mimic.Utils.Host import resolve_host
+from mimic.Utils.Time import RollingTimeout, latency, timestamp
 
-PUBLIC_ROOT = os.path.abspath('mimic/public')
-MIME_TYPES = MimeTypes()
+_PUBLIC_ROOT = os.path.abspath('mimic/public')
+_MIME_TYPES = MimeTypes()
+_STALE_CONNECTION_INTERVAL: float = 5.0
+_PING_INTERVAL: float = 1.0
 
 middleware = Callable[[Request, Any], Coroutine[Any, Any, Any]]
 route_handler = Callable[[Request], Awaitable[Response]]
@@ -31,12 +34,19 @@ class WebServer:
     __routes = web.RouteTableDef()
     __middlewares: list[middleware] = []
     __video_stream: Optional[MediaStreamTrack] = None
+    __close_connections: bool = False
 
     def __init__(self, host: str = resolve_host(), port: int = 8080, pipe: Connection = None, stop_event: Event = Event()) -> None:
         self.__host = host
         self.__port = port
         self.__pipe = pipe
         self.__stop_event = stop_event
+
+        def on_heartbeat_timeout() -> None:
+            self.__close_connections = True
+
+        self.__heartbeat_timeout = RollingTimeout(
+            _STALE_CONNECTION_INTERVAL, on_heartbeat_timeout)
 
         @self.__middleware
         @web.middleware
@@ -46,7 +56,8 @@ class WebServer:
 
         @self.__routes.get('/')
         async def index(request: Request) -> StreamResponse:
-            content = open(os.path.join(PUBLIC_ROOT, "index.html"), "r").read()
+            content = open(os.path.join(
+                _PUBLIC_ROOT, "index.html"), "r").read()
             return web.Response(content_type="text/html", text=content)
 
         @self.__routes.get('/close')
@@ -83,9 +94,23 @@ class WebServer:
             @pc.on("datachannel")
             def on_datachannel(channel: RTCDataChannel) -> None:
                 @channel.on("message")
-                def on_message(message: Any) -> None:
-                    if isinstance(message, str) and message.startswith("ping"):
-                        channel.send("pong" + message[4:])
+                async def on_message(message: Any) -> None:
+                    if isinstance(message, str):
+                        if channel.label == "latency":
+                            if message == '-1':
+                                self.__heartbeat_timeout.start()
+                            else:
+                                round_trip_time = latency(int(message))
+                                self.__log(
+                                    f"Latency {round_trip_time}ms", logging.DEBUG)
+
+                                self.__heartbeat_timeout.rollback()
+
+                            await asyncio.sleep(_PING_INTERVAL)
+                            try:
+                                channel.send(str(timestamp()))
+                            except InvalidStateError:
+                                pass
 
             @pc.on("connectionstatechange")
             async def on_connectionstatechange() -> None:
@@ -99,7 +124,14 @@ class WebServer:
             async def on_track(track: MediaStreamTrack) -> None:
                 self.__log(f"Track {track.kind} received", logging.DEBUG)
 
-                self.__video_stream = track
+                while True:
+                    try:
+                        frame = await track.recv()
+                        print("@TODO Handle frame")
+                    except MediaStreamError as error:
+                        if track.readyState != 'ended':
+                            raise
+                        break
 
                 @track.on("ended")
                 async def on_ended() -> None:
@@ -134,14 +166,14 @@ class WebServer:
         @self.__routes.get(r'/{filename:.+}')
         async def static(request: Request) -> StreamResponse:
             filename = os.path.join(
-                PUBLIC_ROOT, request.match_info['filename'])
+                _PUBLIC_ROOT, request.match_info['filename'])
 
             if not os.path.exists(filename):
                 return web.Response(status=404)
 
             content = open(filename, "r").read()
 
-            mime = MIME_TYPES.guess_type(filename)[0]
+            mime = _MIME_TYPES.guess_type(filename)[0]
             return web.Response(content_type=mime, text=content)
 
     def __log(self, message: str, level: int = logging.INFO) -> None:
@@ -155,15 +187,20 @@ class WebServer:
         self.__middlewares.append(func)
         return func
 
-    async def __on_shutdown(self) -> None:
+    async def __close_all_connections(self) -> int:
+        print("Closing all connections")
+        self.__heartbeat_timeout.stop()
+
         if self.__video_stream is not None:
             self.__video_stream.stop()
-            self.__video_stream = None
 
-        # close peer connections
-        coros = [pc.close() for pc in self.__peer_connections]
-        await asyncio.gather(*coros)
+        for pc in self.__peer_connections:
+            await pc.close()
+
+        num_pcs = len(self.__peer_connections)
         self.__peer_connections.clear()
+
+        return num_pcs
 
     async def run(self) -> None:
         ssl_context = ssl.SSLContext()
@@ -183,15 +220,15 @@ class WebServer:
         print(f"Listening at https://{self.__host}:{self.__port}")
 
         while not self.__stop_event.is_set():
-            if self.__video_stream is not None:
-                frame = await self.__video_stream.recv()
-                print("@TODO Handle video frames")
+            if self.__close_connections:
+                self.__close_connections = False
+                await self.__close_all_connections()
 
             else:
                 await asyncio.sleep(1)
 
         try:
-            await self.__on_shutdown()
+            await self.__close_all_connections()
             await site.stop()
             await runner.cleanup()
             await runner.shutdown()

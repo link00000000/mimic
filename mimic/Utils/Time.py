@@ -24,7 +24,7 @@ class RollingTimeout:
     If `rollback` is invoked before expiration, the timer will be reset back to the original interval.
     """
 
-    def __init__(self, interval: int, callback: Callable):
+    def __init__(self, interval: float, callback: Callable):
         """
         Create new instance of `RollingTimeout`.
 
