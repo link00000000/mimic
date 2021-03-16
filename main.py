@@ -59,7 +59,7 @@ def main():
 
     server_pipe, _server_pipe = Pipe()
     server_thread = Thread(target=server_thread_runner, args=[
-                           _server_pipe], name="WebServer")
+                           _server_pipe, stop_event], name="WebServer")
     server_thread.start()
 
     gui = GUI()

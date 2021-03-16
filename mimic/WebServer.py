@@ -5,6 +5,7 @@ import os
 import ssl
 import uuid
 from multiprocessing.connection import Connection
+from threading import Event
 
 from aiohttp import web
 from aiohttp.web_request import Request
@@ -21,10 +22,11 @@ class WebServer:
     pcs: set[RTCPeerConnection] = set()
     routes = web.RouteTableDef()
 
-    def __init__(self, host=resolve_host(), port=8080, pipe: Connection = None) -> None:
+    def __init__(self, host=resolve_host(), port=8080, pipe: Connection = None, stop_event=Event()) -> None:
         self.__host = host
         self.__port = port
         self.__pipe = pipe
+        self.__stop_event = stop_event
 
         @self.routes.get('/')
         async def index(request):
@@ -108,7 +110,7 @@ class WebServer:
                 ),
             )
 
-    async def on_shutdown(self, app):
+    async def __on_shutdown(self):
         # close peer connections
         coros = [pc.close() for pc in self.pcs]
         await asyncio.gather(*coros)
@@ -122,7 +124,6 @@ class WebServer:
             "./certs/selfsigned.cert", "./certs/selfsigned.pem")
 
         app = web.Application()
-        app.on_shutdown.append(self.on_shutdown)
         app.router.add_routes(self.routes)
 
         runner = web.AppRunner(app, handle_signals=True)
@@ -134,16 +135,18 @@ class WebServer:
 
         print(f"Listening at https://{self.__host}:{self.__port}")
 
-        while True:
+        while not self.__stop_event.is_set():
             await asyncio.sleep(1)
 
+        await self.__on_shutdown()
+        await runner.cleanup()
 
-def server_thread_runner(pipe: Connection):
+
+def server_thread_runner(pipe: Connection, stop_event: Event):
     """Initialize and run the web server on a worker thread."""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    server = WebServer(pipe=pipe)
+    server = WebServer(pipe=pipe, stop_event=stop_event)
 
     loop.run_until_complete(server.start())
-    loop.close()
