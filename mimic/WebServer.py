@@ -1,3 +1,4 @@
+"""HTTP web server."""
 import asyncio
 import json
 import logging
@@ -33,6 +34,13 @@ route_handler = Callable[[Request], Awaitable[Response]]
 
 
 class WebServer:
+    """
+    Async HTTP server, messages can be recieved by polling `pipe`.
+
+    @NOTE Because we need access to `self` inside the route, all routes
+    must be defined inside of `__init__` instead of individual methods.
+    """
+
     __peer_connections: set[RTCPeerConnection] = set()
     __routes = web.RouteTableDef()
     __middlewares: list[middleware] = []
@@ -40,6 +48,16 @@ class WebServer:
     __close_connections: bool = False
 
     def __init__(self, host: str = resolve_host(), port: int = 8080, pipe: Connection = None, stop_event: Event = Event()) -> None:
+        """
+        Initialize web server.
+
+        Args:
+            host (str, optional): Host to listen to HTTP traffic on. Defaults to `resolve_host()`.
+            port (int, optional): Port to listen to HTTP traffic on. Defaults to 8080.
+            stop_event (Event, optional): When set, the web server will shutdown. Defaults to None.
+        """
+        super().__init__()
+
         self.__host = host
         self.__port = port
         self.__pipe = pipe
@@ -57,6 +75,8 @@ class WebServer:
             self.__log(f"{request.method} {request.path} - {request.remote}")
             return await handler(request)
 
+        # Routes must be declared inside the constructor so that we have access
+        # to `self`
         @self.__routes.get('/')
         async def index(request: Request) -> StreamResponse:
             content = open(os.path.join(
@@ -100,6 +120,8 @@ class WebServer:
                 async def on_message(message: Any) -> None:
                     if isinstance(message, str):
                         if channel.label == "latency":
+                            # If we recieve a -1, then it is the first message
+                            # and the rolling timout should be started
                             if message == '-1':
                                 self.__heartbeat_timeout.start()
                             else:
@@ -113,6 +135,10 @@ class WebServer:
                             try:
                                 channel.send(str(timestamp()))
                             except InvalidStateError:
+                                # Theres a chance the server will try to send a
+                                # message after the connection is closed,
+                                # raising an `InvalidStateError`. We should just
+                                # ignore those.
                                 pass
 
             @pc.on("connectionstatechange")
@@ -127,6 +153,10 @@ class WebServer:
             async def on_track(track: MediaStreamTrack) -> None:
                 self.__log(f"Track {track.kind} received", logging.DEBUG)
 
+                # We have to handle frames inside of here instead of elsewere in
+                # the class. Creating another reference to the track seems to
+                # cause errors when closing the connection, resulting in a
+                # deadlock
                 while True:
                     try:
                         frame = await track.recv()
@@ -154,6 +184,8 @@ class WebServer:
                 await pc.setLocalDescription(answer)
 
             except InvalidStateError as error:
+                # This will usually only be triggered if the server is closed
+                # while the client is establishing a connection.
                 self.__log(
                     f"Failed to create peer connection: {str(error)}", logging.ERROR)
                 return web.Response(status=500)
@@ -168,6 +200,12 @@ class WebServer:
 
         @self.__routes.get(r'/{filename:.+}')
         async def static(request: Request) -> StreamResponse:
+            """
+            Return file contents of files located in public directory.
+
+            If file is not found, return status code 404. Mime type of file is
+            guessed based off of file extension.
+            """
             filename = os.path.join(
                 _PUBLIC_ROOT, request.match_info['filename'])
 
@@ -180,6 +218,13 @@ class WebServer:
             return web.Response(content_type=mime, text=content)
 
     def __log(self, message: str, level: int = logging.INFO) -> None:
+        """
+        Send log messages over Pipe to the main process
+
+        Args:
+            message (str): Message content
+            level (int, optional): Logging level. Defaults to logging.INFO.
+        """
         if self.__pipe is None:
             print(message)
 
@@ -187,10 +232,34 @@ class WebServer:
             self.__pipe.send(LogMessage(message, level))
 
     def __middleware(self, func: Callable) -> Callable:
+        """
+        Add a function to the list of middlewares.
+
+        Functions must be declared and decorated before the application
+        is registered and started.
+
+        >>> @middleware
+        >>> @web.middleware
+        >>> async def my_middleware(request, handler):
+        >>>     # Do something
+        >>>     return await handler(request)
+
+        Args:
+            func (Callable): Middleware function
+
+        Returns:
+            Callable: [description]: Identical middleware function
+        """
         self.__middlewares.append(func)
         return func
 
     async def __close_all_connections(self) -> int:
+        """
+        Close all WebRTC connection and stop the video track.
+
+        Returns:
+            int: Number of connections closed
+        """
         self.__log("Closing all connections", logging.DEBUG)
         self.__heartbeat_timeout.stop()
 
@@ -206,6 +275,7 @@ class WebServer:
         return num_pcs
 
     async def run(self) -> None:
+        """Start listening to HTTP traffic."""
         ssl_context = ssl.SSLContext()
         ssl_context.load_cert_chain(_SSL_CERT, _SSL_KEY)
 
@@ -223,6 +293,9 @@ class WebServer:
 
         while not self.__stop_event.is_set():
             if self.__close_connections:
+                # Close connections when the __close_connections flag is set.
+                # This has to be done inside of this loop and cannot be done in
+                # a callback in `__init__()`
                 self.__close_connections = False
                 await self.__close_all_connections()
 
@@ -241,7 +314,13 @@ class WebServer:
 
 
 def server_thread_runner(pipe: Connection, stop_event: Event) -> None:
-    """Initialize and run the web server on a worker thread."""
+    """
+    Initialize and run the web server on a worker thread.
+
+    Args:
+        pipe (Connection): One end of a pipe to send data to another thread
+        stop_event (Event): Flag, when set, will stop the webserver
+    """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
