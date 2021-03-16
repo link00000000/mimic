@@ -6,12 +6,13 @@ import ssl
 from mimetypes import MimeTypes
 from multiprocessing.connection import Connection
 from threading import Event
-from typing import Any, Awaitable, Callable, Coroutine
+from typing import Any, Awaitable, Callable, Coroutine, Optional
 
 from aiohttp import web
 from aiohttp.web_request import Request
 from aiohttp.web_response import Response, StreamResponse
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
+from aiortc.mediastreams import MediaStreamError
 from aiortc.rtcdatachannel import RTCDataChannel
 
 from mimic.Pipeable import LogMessage
@@ -28,6 +29,7 @@ class WebServer:
     __peer_connections: set[RTCPeerConnection] = set()
     __routes = web.RouteTableDef()
     __middlewares: list[middleware] = []
+    __video_stream: Optional[MediaStreamTrack] = None
 
     def __init__(self, host: str = resolve_host(), port: int = 8080, pipe: Connection = None, stop_event: Event = Event()) -> None:
         self.__host = host
@@ -48,6 +50,9 @@ class WebServer:
 
         @self.__routes.get('/close')
         async def close_connection(request: Request) -> StreamResponse:
+            if self.__video_stream is not None:
+                self.__video_stream.stop()
+
             for pc in self.__peer_connections:
                 await pc.close()
 
@@ -87,11 +92,14 @@ class WebServer:
                     self.__peer_connections.discard(pc)
 
             @pc.on("track")
-            def on_track(track: MediaStreamTrack) -> None:
+            async def on_track(track: MediaStreamTrack) -> None:
                 self.__log(f"Track {track.kind} received", logging.DEBUG)
+
+                self.__video_stream = track
 
                 @track.on("ended")
                 async def on_ended() -> None:
+                    self.__video_stream = None
                     self.__log(f"Track {track.kind} ended", logging.DEBUG)
 
             # handle offer
