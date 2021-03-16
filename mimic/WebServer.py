@@ -4,12 +4,13 @@ import logging
 import os
 import ssl
 import uuid
-from threading import Thread
+from multiprocessing.connection import Connection
 
 from aiohttp import web
 from aiohttp.web_request import Request
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 
+from mimic.Pipeable import LogMessage
 from mimic.Utils.Host import resolve_host
 
 ROOT = os.path.abspath('mimic/public')
@@ -20,13 +21,15 @@ class WebServer:
     pcs: set[RTCPeerConnection] = set()
     routes = web.RouteTableDef()
 
-    def __init__(self, host=resolve_host(), port=8080) -> None:
-        self.host = host
-        self.port = port
+    def __init__(self, host=resolve_host(), port=8080, pipe: Connection = None) -> None:
+        self.__host = host
+        self.__port = port
+        self.__pipe = pipe
 
         @self.routes.get('/')
         async def index(request):
             content = open(os.path.join(ROOT, "index.html"), "r").read()
+            self.__pipe.send(LogMessage("Got a request on '/'"))
             return web.Response(content_type="text/html", text=content)
 
         @self.routes.get('/app.js')
@@ -125,21 +128,22 @@ class WebServer:
         runner = web.AppRunner(app, handle_signals=True)
         await runner.setup()
 
-        site = web.TCPSite(runner, self.host, self.port,
+        site = web.TCPSite(runner, self.__host, self.__port,
                            ssl_context=ssl_context)
         await site.start()
 
-        print(f"Listening at https://{self.host}:{self.port}")
+        print(f"Listening at https://{self.__host}:{self.__port}")
 
         while True:
             await asyncio.sleep(1)
 
 
-def server_thread_runner():
+def server_thread_runner(pipe: Connection):
+    """Initialize and run the web server on a worker thread."""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    server = WebServer()
+    server = WebServer(pipe=pipe)
 
     loop.run_until_complete(server.start())
     loop.close()

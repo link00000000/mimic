@@ -21,12 +21,11 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import asyncio
 import logging
+from multiprocessing.connection import Pipe
 from signal import SIGINT, SIGTERM, signal
 from sys import stdout
 from threading import Event, Thread
-from tkinter import TclError, Tk
 from types import FrameType
 
 from mimic.GUI.GUI import GUI
@@ -50,32 +49,6 @@ def stop_handler(signal_number: int, frame: FrameType):
     stop_event.set()
 
 
-# def run_server(server: WebServer):
-def run_server(server):
-    """
-    Initialize and run the web server on a worker thread.
-
-    Args:
-        server (WebServer): Web server instance
-    """
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    loop.run_until_complete(server.start())
-
-
-async def run_gui(root: Tk, interval=0.05):
-    try:
-        while True:
-            root.update_idletasks()
-            root.update()
-            await asyncio.sleep(interval)
-
-    except TclError as error:
-        if "application has been destroyed" not in error.args[0]:
-            raise error
-
-
 def main():
     """Mimic main entrypoint."""
     signal(SIGINT, stop_handler)
@@ -84,7 +57,9 @@ def main():
     tray_icon = TrayIcon(stop_event=stop_event)
     tray_icon.run()
 
-    server_thread = Thread(target=server_thread_runner, name="Web-Server")
+    server_pipe, _server_pipe = Pipe()
+    server_thread = Thread(target=server_thread_runner, args=[
+                           _server_pipe], name="WebServer")
     server_thread.start()
 
     gui = GUI()
@@ -94,56 +69,34 @@ def main():
         stop_event.set()
 
     # Initialize web server logger
-    # webserver_logger = logging.getLogger('mimic.webserver')
-    # webserver_logger.addHandler(AsyncFileHandler("mimic.log"))
-    # webserver_logger.addHandler(logging.StreamHandler(stdout))
-    # webserver_logger.addHandler(TkinterTextHandler(
-    #     gui.debug_log_window.debug_text))
-    # webserver_logger.setLevel(logging.DEBUG)
+    webserver_logger = logging.getLogger('mimic.webserver')
+    webserver_logger.addHandler(AsyncFileHandler("mimic.log"))
+    webserver_logger.addHandler(logging.StreamHandler(stdout))
+    webserver_logger.addHandler(TkinterTextHandler(
+        gui.debug_log_window.debug_text))
+    webserver_logger.setLevel(logging.DEBUG)
 
     # Main loop
-    # while True:
-    #     if stop_event.is_set():
-    #         break
+    while not stop_event.is_set():
 
-    # Get data from web server
-    # if server.pipe.poll():
-    #     data = server.pipe.recv()
+        # Get data from web server
+        if server_pipe.poll():
+            data: LogMessage = server_pipe.recv()
+            webserver_logger.log(data.level, data.payload)
 
-    #     if data.isType(LogMessage):
-    #         level = data.level
-    #         payload = data.payload
+        # Get data from tray icon
+        if tray_icon.pipe.poll():
+            message: StringMessage = tray_icon.pipe.recv()
 
-    #         if level is logging.DEBUG:
-    #             webserver_logger.debug(payload)
-    #         elif level is logging.INFO:
-    #             webserver_logger.info(payload)
-    #         elif level is logging.WARNING:
-    #             webserver_logger.warning(payload)
-    #         elif level is logging.ERROR:
-    #             webserver_logger.error(payload)
-    #         elif level is logging.CRITICAL:
-    #             webserver_logger.critical(payload)
+            if message == "show_debug_logs":
+                gui.debug_log_window.show()
 
-    # Get data from tray icon
-    # if tray_icon.pipe.poll():
-    #     message: StringMessage = tray_icon.pipe.recv()
-
-    #     if message == "show_debug_logs":
-    #         gui.debug_log_window.show()
-
-    # Update GUI
-    # gui.update_idletasks()
-    # gui.update()
-    # await asyncio.gather(
-    #     run_gui(gui),
-    # )
+        # Update GUI
+        gui.update_idletasks()
+        gui.update()
 
     server_thread.join()
 
 
 if __name__ == "__main__":
     main()
-    # server_thread_runner()
-    # event_loop = asyncio.get_event_loop()
-    # event_loop.run_until_complete(main())

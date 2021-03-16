@@ -25,7 +25,7 @@ class Pipeable(ABC):
         self.pipe, self._pipe = Pipe()
 
 
-class _abstractMessage(ABC):
+class GenericMessage(ABC):
     """
     The base to build messages to send through a pipe.
 
@@ -56,7 +56,7 @@ class _abstractMessage(ABC):
         return self.__class__.__name__ == classDeclaration.__name__
 
 
-class StringMessage(_abstractMessage):
+class StringMessage(GenericMessage):
     """A Pipeable message of type `str`."""
 
     def __init__(self, payload: str):
@@ -69,7 +69,7 @@ class StringMessage(_abstractMessage):
         super().__init__(payload)
 
 
-class LogMessage(_abstractMessage):
+class LogMessage(GenericMessage):
     """A Pipeable message to send logging information."""
 
     def __init__(self, payload: str, level: int = logging.INFO):
