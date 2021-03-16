@@ -89,132 +89,133 @@ class VideoTransformTrack(MediaStreamTrack):
             return frame
 
 
-async def run(args):
+class WebServer:
     logger = logging.getLogger("pc")
     pcs: set[RTCPeerConnection] = set()
+    routes = web.RouteTableDef()
 
-    async def index(request):
-        content = open(os.path.join(ROOT, "index.html"), "r").read()
-        return web.Response(content_type="text/html", text=content)
+    def __init__(self, host=resolve_host(), port=8080) -> None:
+        self.host = host
+        self.port = port
 
-    async def javascript(request):
-        content = open(os.path.join(ROOT, "app.js"), "r").read()
-        return web.Response(content_type="application/javascript", text=content)
+        @self.routes.get('/')
+        async def index(request):
+            content = open(os.path.join(ROOT, "index.html"), "r").read()
+            return web.Response(content_type="text/html", text=content)
 
-    async def css(request):
-        content = open(os.path.join(ROOT, "app.css"), "r").read()
-        return web.Response(content_type="text/css", text=content)
+        @self.routes.get('/app.js')
+        async def javascript(request):
+            content = open(os.path.join(ROOT, "app.js"), "r").read()
+            return web.Response(content_type="application/javascript", text=content)
 
-    async def close_connection(request: Request):
-        for pc in pcs:
-            await pc.close()
+        @self.routes.get('/app.css')
+        async def css(request):
+            content = open(os.path.join(ROOT, "app.css"), "r").read()
+            return web.Response(content_type="text/css", text=content)
 
-        num_pcs = len(pcs)
-        pcs.clear()
-
-        return web.Response(text=f"Closed {num_pcs} connection(s)", status=200)
-
-    async def offer(request):
-        params = await request.json()
-        offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
-
-        pc = RTCPeerConnection()
-        pc_id = "PeerConnection(%s)" % uuid.uuid4()
-        pcs.add(pc)
-
-        def log_info(msg, *args):
-            logger.info(pc_id + " " + msg, *args)
-
-        log_info("Created for %s", request.remote)
-
-        # prepare local media
-        player = MediaPlayer(os.path.join(ROOT, "demo-instruct.wav"))
-        recorder = MediaBlackhole()
-
-        @pc.on("datachannel")
-        def on_datachannel(channel):
-            @channel.on("message")
-            def on_message(message):
-                if isinstance(message, str) and message.startswith("ping"):
-                    channel.send("pong" + message[4:])
-
-        @pc.on("connectionstatechange")
-        async def on_connectionstatechange():
-            log_info("Connection state is %s", pc.connectionState)
-            if pc.connectionState == "failed":
+        @self.routes.get('/close')
+        async def close_connection(request: Request):
+            for pc in self.pcs:
                 await pc.close()
-                pcs.discard(pc)
 
-        @pc.on("track")
-        def on_track(track):
-            log_info("Track %s received", track.kind)
+            num_pcs = len(self.pcs)
+            self.pcs.clear()
 
-            @track.on("ended")
-            async def on_ended():
-                log_info("Track %s ended", track.kind)
-                await recorder.stop()
+            return web.Response(text=f"Closed {num_pcs} connection(s)", status=200)
 
-        # handle offer
-        await pc.setRemoteDescription(offer)
-        await recorder.start()
+        @self.routes.post('/webrtc-offer')
+        async def offer(request):
+            params = await request.json()
+            offer = RTCSessionDescription(
+                sdp=params["sdp"], type=params["type"])
 
-        # send answer
-        answer = await pc.createAnswer()
-        await pc.setLocalDescription(answer)
+            pc = RTCPeerConnection()
+            pc_id = "PeerConnection(%s)" % uuid.uuid4()
+            self.pcs.add(pc)
 
-        return web.Response(
-            content_type="application/json",
-            text=json.dumps(
-                {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
-            ),
-        )
+            def log_info(msg, *args):
+                self.logger.info(pc_id + " " + msg, *args)
 
-    async def on_shutdown(app):
+            log_info("Created for %s", request.remote)
+
+            # prepare local media
+            player = MediaPlayer(os.path.join(ROOT, "demo-instruct.wav"))
+            recorder = MediaBlackhole()
+
+            @pc.on("datachannel")
+            def on_datachannel(channel):
+                @channel.on("message")
+                def on_message(message):
+                    if isinstance(message, str) and message.startswith("ping"):
+                        channel.send("pong" + message[4:])
+
+            @pc.on("connectionstatechange")
+            async def on_connectionstatechange():
+                log_info("Connection state is %s", pc.connectionState)
+                if pc.connectionState == "failed":
+                    await pc.close()
+                    self.pcs.discard(pc)
+
+            @pc.on("track")
+            def on_track(track):
+                log_info("Track %s received", track.kind)
+
+                @track.on("ended")
+                async def on_ended():
+                    log_info("Track %s ended", track.kind)
+                    await recorder.stop()
+
+            # handle offer
+            await pc.setRemoteDescription(offer)
+            await recorder.start()
+
+            # send answer
+            answer = await pc.createAnswer()
+            await pc.setLocalDescription(answer)
+
+            return web.Response(
+                content_type="application/json",
+                text=json.dumps(
+                    {"sdp": pc.localDescription.sdp,
+                        "type": pc.localDescription.type}
+                ),
+            )
+
+    async def on_shutdown(self, app):
         # close peer connections
-        coros = [pc.close() for pc in pcs]
+        coros = [pc.close() for pc in self.pcs]
         await asyncio.gather(*coros)
-        pcs.clear()
+        self.pcs.clear()
 
-    if args['verbose']:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
+    async def start(self):
         logging.basicConfig(level=logging.INFO)
 
-    ssl_context = ssl.SSLContext()
-    ssl_context.load_cert_chain(
-        "./certs/selfsigned.cert", "./certs/selfsigned.pem")
+        ssl_context = ssl.SSLContext()
+        ssl_context.load_cert_chain(
+            "./certs/selfsigned.cert", "./certs/selfsigned.pem")
 
-    app = web.Application()
-    app.on_shutdown.append(on_shutdown)
-    app.router.add_get("/", index)
-    app.router.add_get("/app.js", javascript)
-    app.router.add_get('/app.css', css)
-    app.router.add_post("/webrtc-offer", offer)
-    app.router.add_get('/close', close_connection)
+        app = web.Application()
+        app.on_shutdown.append(self.on_shutdown)
+        app.router.add_routes(self.routes)
 
-    runner = web.AppRunner(app, handle_signals=True)
-    await runner.setup()
+        runner = web.AppRunner(app, handle_signals=True)
+        await runner.setup()
 
-    site = web.TCPSite(runner, args['host'],
-                       args['port'], ssl_context=ssl_context)
-    await site.start()
+        site = web.TCPSite(runner, self.host, self.port,
+                           ssl_context=ssl_context)
+        await site.start()
 
-    print(f"Listening at https://{args['host']}:{args['port']}")
+        print(f"Listening at https://{self.host}:{self.port}")
 
-    while True:
-        await asyncio.sleep(1)
+        while True:
+            await asyncio.sleep(1)
 
 
 def server_thread_runner():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    args = {
-        "host": resolve_host(),
-        "port": "8080",
-        "verbose": False,
-        "record_to": "output.mp4"
-    }
+    server = WebServer()
 
-    loop.run_until_complete(run(args))
+    loop.run_until_complete(server.start())
     loop.close()

@@ -84,7 +84,6 @@ def main():
     tray_icon = TrayIcon(stop_event=stop_event)
     tray_icon.run()
 
-    # server = WebServer(stop_event=stop_event)
     server_thread = Thread(target=server_thread_runner, name="Web-Server")
     server_thread.start()
 
