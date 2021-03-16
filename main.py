@@ -85,8 +85,8 @@ def main():
     tray_icon.run()
 
     # server = WebServer(stop_event=stop_event)
-    # server_thread = Thread(target=run_server, args=[server], name="Web-Server")
-    # server_thread.start()
+    server_thread = Thread(target=server_thread_runner, name="Web-Server")
+    server_thread.start()
 
     gui = GUI()
 
@@ -103,50 +103,48 @@ def main():
     # webserver_logger.setLevel(logging.DEBUG)
 
     # Main loop
-    while True:
-        if stop_event.is_set():
-            break
+    # while True:
+    #     if stop_event.is_set():
+    #         break
 
-        # Get data from web server
-        # if server.pipe.poll():
-        #     data = server.pipe.recv()
+    # Get data from web server
+    # if server.pipe.poll():
+    #     data = server.pipe.recv()
 
-        #     if data.isType(LogMessage):
-        #         level = data.level
-        #         payload = data.payload
+    #     if data.isType(LogMessage):
+    #         level = data.level
+    #         payload = data.payload
 
-        #         if level is logging.DEBUG:
-        #             webserver_logger.debug(payload)
-        #         elif level is logging.INFO:
-        #             webserver_logger.info(payload)
-        #         elif level is logging.WARNING:
-        #             webserver_logger.warning(payload)
-        #         elif level is logging.ERROR:
-        #             webserver_logger.error(payload)
-        #         elif level is logging.CRITICAL:
-        #             webserver_logger.critical(payload)
+    #         if level is logging.DEBUG:
+    #             webserver_logger.debug(payload)
+    #         elif level is logging.INFO:
+    #             webserver_logger.info(payload)
+    #         elif level is logging.WARNING:
+    #             webserver_logger.warning(payload)
+    #         elif level is logging.ERROR:
+    #             webserver_logger.error(payload)
+    #         elif level is logging.CRITICAL:
+    #             webserver_logger.critical(payload)
 
-        # Get data from tray icon
-        if tray_icon.pipe.poll():
-            message: StringMessage = tray_icon.pipe.recv()
+    # Get data from tray icon
+    # if tray_icon.pipe.poll():
+    #     message: StringMessage = tray_icon.pipe.recv()
 
-            if message == "show_debug_logs":
-                gui.debug_log_window.show()
+    #     if message == "show_debug_logs":
+    #         gui.debug_log_window.show()
 
-        # Update GUI
-        # gui.update_idletasks()
-        # gui.update()
-        # await asyncio.gather(
-        #     run_gui(gui),
-        # )
+    # Update GUI
+    # gui.update_idletasks()
+    # gui.update()
+    # await asyncio.gather(
+    #     run_gui(gui),
+    # )
 
-    server_thread_runner()
-
-    # server_thread.join()
+    server_thread.join()
 
 
 if __name__ == "__main__":
-    # main()
-    server_thread_runner()
+    main()
+    # server_thread_runner()
     # event_loop = asyncio.get_event_loop()
     # event_loop.run_until_complete(main())
