@@ -26,6 +26,7 @@ import logging
 from signal import SIGINT, SIGTERM, signal
 from sys import stdout
 from threading import Event, Thread
+from tkinter import TclError, Tk
 from types import FrameType
 
 from mimic.GUI.GUI import GUI
@@ -33,7 +34,7 @@ from mimic.Logging.AsyncLoggingHandler import AsyncFileHandler
 from mimic.Logging.TkinterLoggingHandler import TkinterTextHandler
 from mimic.Pipeable import LogMessage, StringMessage
 from mimic.TrayIcon import TrayIcon
-from mimic.WebServer import WebServer
+from mimic.WebServer import server_thread_runner
 
 stop_event = Event()
 
@@ -49,7 +50,8 @@ def stop_handler(signal_number: int, frame: FrameType):
     stop_event.set()
 
 
-def run_server(server: WebServer):
+# def run_server(server: WebServer):
+def run_server(server):
     """
     Initialize and run the web server on a worker thread.
 
@@ -62,6 +64,18 @@ def run_server(server: WebServer):
     loop.run_until_complete(server.start())
 
 
+async def run_gui(root: Tk, interval=0.05):
+    try:
+        while True:
+            root.update_idletasks()
+            root.update()
+            await asyncio.sleep(interval)
+
+    except TclError as error:
+        if "application has been destroyed" not in error.args[0]:
+            raise error
+
+
 def main():
     """Mimic main entrypoint."""
     signal(SIGINT, stop_handler)
@@ -70,9 +84,9 @@ def main():
     tray_icon = TrayIcon(stop_event=stop_event)
     tray_icon.run()
 
-    server = WebServer(stop_event=stop_event)
-    server_thread = Thread(target=run_server, args=[server], name="Web-Server")
-    server_thread.start()
+    # server = WebServer(stop_event=stop_event)
+    # server_thread = Thread(target=run_server, args=[server], name="Web-Server")
+    # server_thread.start()
 
     gui = GUI()
 
@@ -81,12 +95,12 @@ def main():
         stop_event.set()
 
     # Initialize web server logger
-    webserver_logger = logging.getLogger('mimic.webserver')
-    webserver_logger.addHandler(AsyncFileHandler("mimic.log"))
-    webserver_logger.addHandler(logging.StreamHandler(stdout))
-    webserver_logger.addHandler(TkinterTextHandler(
-        gui.debug_log_window.debug_text))
-    webserver_logger.setLevel(logging.DEBUG)
+    # webserver_logger = logging.getLogger('mimic.webserver')
+    # webserver_logger.addHandler(AsyncFileHandler("mimic.log"))
+    # webserver_logger.addHandler(logging.StreamHandler(stdout))
+    # webserver_logger.addHandler(TkinterTextHandler(
+    #     gui.debug_log_window.debug_text))
+    # webserver_logger.setLevel(logging.DEBUG)
 
     # Main loop
     while True:
@@ -94,23 +108,23 @@ def main():
             break
 
         # Get data from web server
-        if server.pipe.poll():
-            data = server.pipe.recv()
+        # if server.pipe.poll():
+        #     data = server.pipe.recv()
 
-            if data.isType(LogMessage):
-                level = data.level
-                payload = data.payload
+        #     if data.isType(LogMessage):
+        #         level = data.level
+        #         payload = data.payload
 
-                if level is logging.DEBUG:
-                    webserver_logger.debug(payload)
-                elif level is logging.INFO:
-                    webserver_logger.info(payload)
-                elif level is logging.WARNING:
-                    webserver_logger.warning(payload)
-                elif level is logging.ERROR:
-                    webserver_logger.error(payload)
-                elif level is logging.CRITICAL:
-                    webserver_logger.critical(payload)
+        #         if level is logging.DEBUG:
+        #             webserver_logger.debug(payload)
+        #         elif level is logging.INFO:
+        #             webserver_logger.info(payload)
+        #         elif level is logging.WARNING:
+        #             webserver_logger.warning(payload)
+        #         elif level is logging.ERROR:
+        #             webserver_logger.error(payload)
+        #         elif level is logging.CRITICAL:
+        #             webserver_logger.critical(payload)
 
         # Get data from tray icon
         if tray_icon.pipe.poll():
@@ -120,11 +134,19 @@ def main():
                 gui.debug_log_window.show()
 
         # Update GUI
-        gui.update_idletasks()
-        gui.update()
+        # gui.update_idletasks()
+        # gui.update()
+        # await asyncio.gather(
+        #     run_gui(gui),
+        # )
 
-    server_thread.join()
+    server_thread_runner()
+
+    # server_thread.join()
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    server_thread_runner()
+    # event_loop = asyncio.get_event_loop()
+    # event_loop.run_until_complete(main())
