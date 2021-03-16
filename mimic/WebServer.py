@@ -5,14 +5,12 @@ import os
 import ssl
 import uuid
 from threading import Thread
-from types import resolve_bases
 
 import cv2
 from aiohttp import web
 from aiohttp.web_request import Request
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.media import (MediaBlackhole, MediaPlayer, MediaRecorder,
-                                  MediaRelay)
+from aiortc.contrib.media import MediaBlackhole, MediaPlayer
 from av import VideoFrame
 
 from mimic.Utils.Host import resolve_host
@@ -21,7 +19,6 @@ ROOT = os.path.abspath('mimic/public')
 
 logger = logging.getLogger("pc")
 pcs: set[RTCPeerConnection] = set()
-relay = MediaRelay()
 
 
 class VideoTransformTrack(MediaStreamTrack):
@@ -154,14 +151,6 @@ async def offer(request):
     @pc.on("track")
     def on_track(track):
         log_info("Track %s received", track.kind)
-
-        if track.kind == "audio":
-            pc.addTrack(player.audio)
-            recorder.addTrack(track)
-        elif track.kind == "video":
-            pc.addTrack(
-                relay.subscribe(track)
-            )
 
         @track.on("ended")
         async def on_ended():
