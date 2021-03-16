@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import ssl
+from mimetypes import MimeTypes
 from multiprocessing.connection import Connection
 from threading import Event
 from typing import Any, Callable, Coroutine
@@ -14,8 +15,9 @@ from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from mimic.Pipeable import LogMessage
 from mimic.Utils.Host import resolve_host
 
-ROOT = os.path.abspath('mimic/public')
+PUBLIC_ROOT = os.path.abspath('mimic/public')
 middleware = Callable[[Request, Any], Coroutine[Any, Any, Any]]
+mimetypes = MimeTypes()
 
 
 class WebServer:
@@ -37,18 +39,8 @@ class WebServer:
 
         @self.__routes.get('/')
         async def index(request):
-            content = open(os.path.join(ROOT, "index.html"), "r").read()
+            content = open(os.path.join(PUBLIC_ROOT, "index.html"), "r").read()
             return web.Response(content_type="text/html", text=content)
-
-        @self.__routes.get('/app.js')
-        async def javascript(request):
-            content = open(os.path.join(ROOT, "app.js"), "r").read()
-            return web.Response(content_type="application/javascript", text=content)
-
-        @self.__routes.get('/app.css')
-        async def css(request):
-            content = open(os.path.join(ROOT, "app.css"), "r").read()
-            return web.Response(content_type="text/css", text=content)
 
         @self.__routes.get('/close')
         async def close_connection(request: Request):
@@ -112,6 +104,19 @@ class WebServer:
                         "type": pc.localDescription.type}
                 ),
             )
+
+        @self.__routes.get(r'/{filename:.+}')
+        async def static(request: Request):
+            filename = os.path.join(
+                PUBLIC_ROOT, request.match_info['filename'])
+
+            if not os.path.exists(filename):
+                return web.Response(status=404)
+
+            content = open(filename, "r").read()
+
+            mime = mimetypes.guess_type(filename)[0]
+            return web.Response(content_type=mime, text=content)
 
     def __log(self, message: str, level: int = logging.INFO):
         if self.__pipe is None:
