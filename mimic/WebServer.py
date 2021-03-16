@@ -51,9 +51,13 @@ class WebServer:
 
         @self.routes.post('/webrtc-offer')
         async def offer(request):
-            params = await request.json()
+            request_body = await request.json()
+
+            if request_body['sdp'] is None or request_body['type'] is None:
+                return web.Response(status=400, text="Bad request, must include 'sdp' and 'type'.")
+
             offer = RTCSessionDescription(
-                sdp=params["sdp"], type=params["type"])
+                sdp=request_body["sdp"], type=request_body["type"])
 
             pc = RTCPeerConnection()
             pc_id = "PeerConnection(%s)" % uuid.uuid4()
