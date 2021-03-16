@@ -3,7 +3,6 @@ import json
 import logging
 import os
 import ssl
-import uuid
 from multiprocessing.connection import Connection
 from threading import Event
 
@@ -18,9 +17,8 @@ ROOT = os.path.abspath('mimic/public')
 
 
 class WebServer:
-    logger = logging.getLogger("pc")
-    pcs: set[RTCPeerConnection] = set()
-    routes = web.RouteTableDef()
+    __pcs: set[RTCPeerConnection] = set()
+    __routes = web.RouteTableDef()
 
     def __init__(self, host=resolve_host(), port=8080, pipe: Connection = None, stop_event=Event()) -> None:
         self.__host = host
@@ -28,33 +26,40 @@ class WebServer:
         self.__pipe = pipe
         self.__stop_event = stop_event
 
-        @self.routes.get('/')
+        @self.__routes.get('/')
         async def index(request):
+            self.__log("GET /")
+
             content = open(os.path.join(ROOT, "index.html"), "r").read()
-            self.__pipe.send(LogMessage("Got a request on '/'"))
             return web.Response(content_type="text/html", text=content)
 
-        @self.routes.get('/app.js')
+        @self.__routes.get('/app.js')
         async def javascript(request):
+            self.__log("GET /app.js")
+
             content = open(os.path.join(ROOT, "app.js"), "r").read()
             return web.Response(content_type="application/javascript", text=content)
 
-        @self.routes.get('/app.css')
+        @self.__routes.get('/app.css')
         async def css(request):
+            self.__log("GET /app.css")
+
             content = open(os.path.join(ROOT, "app.css"), "r").read()
             return web.Response(content_type="text/css", text=content)
 
-        @self.routes.get('/close')
+        @self.__routes.get('/close')
         async def close_connection(request: Request):
-            for pc in self.pcs:
+            self.__log("GET /close")
+
+            for pc in self.__pcs:
                 await pc.close()
 
-            num_pcs = len(self.pcs)
-            self.pcs.clear()
+            num_pcs = len(self.__pcs)
+            self.__pcs.clear()
 
             return web.Response(text=f"Closed {num_pcs} connection(s)", status=200)
 
-        @self.routes.post('/webrtc-offer')
+        @self.__routes.post('/webrtc-offer')
         async def offer(request):
             request_body = await request.json()
 
@@ -65,13 +70,9 @@ class WebServer:
                 sdp=request_body["sdp"], type=request_body["type"])
 
             pc = RTCPeerConnection()
-            pc_id = "PeerConnection(%s)" % uuid.uuid4()
-            self.pcs.add(pc)
+            self.__pcs.add(pc)
 
-            def log_info(msg, *args):
-                self.logger.info(pc_id + " " + msg, *args)
-
-            log_info("Created for %s", request.remote)
+            self.__log(f"Connection created for {request.remote}")
 
             @pc.on("datachannel")
             def on_datachannel(channel):
@@ -82,18 +83,19 @@ class WebServer:
 
             @pc.on("connectionstatechange")
             async def on_connectionstatechange():
-                log_info("Connection state is %s", pc.connectionState)
+                self.__log(
+                    f"Connection state is {pc.connectionState}", logging.DEBUG)
                 if pc.connectionState == "failed":
                     await pc.close()
-                    self.pcs.discard(pc)
+                    self.__pcs.discard(pc)
 
             @pc.on("track")
             def on_track(track):
-                log_info("Track %s received", track.kind)
+                self.__log(f"Track {track.kind} received", logging.DEBUG)
 
                 @track.on("ended")
                 async def on_ended():
-                    log_info("Track %s ended", track.kind)
+                    self.__log(f"Track {track.kind} ended", logging.DEBUG)
 
             # handle offer
             await pc.setRemoteDescription(offer)
@@ -110,21 +112,26 @@ class WebServer:
                 ),
             )
 
+    def __log(self, message: str, level: int = logging.INFO):
+        if self.__pipe is None:
+            print(message)
+
+        else:
+            self.__pipe.send(LogMessage(message, level))
+
     async def __on_shutdown(self):
         # close peer connections
-        coros = [pc.close() for pc in self.pcs]
+        coros = [pc.close() for pc in self.__pcs]
         await asyncio.gather(*coros)
-        self.pcs.clear()
+        self.__pcs.clear()
 
     async def start(self):
-        logging.basicConfig(level=logging.INFO)
-
         ssl_context = ssl.SSLContext()
         ssl_context.load_cert_chain(
             "./certs/selfsigned.cert", "./certs/selfsigned.pem")
 
         app = web.Application()
-        app.router.add_routes(self.routes)
+        app.router.add_routes(self.__routes)
 
         runner = web.AppRunner(app, handle_signals=True)
         await runner.setup()
