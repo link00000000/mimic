@@ -188,7 +188,7 @@ class WebServer:
         return func
 
     async def __close_all_connections(self) -> int:
-        print("Closing all connections")
+        self.__log("Closing all connections", logging.DEBUG)
         self.__heartbeat_timeout.stop()
 
         if self.__video_stream is not None:
@@ -217,7 +217,7 @@ class WebServer:
                            ssl_context=ssl_context)
         await site.start()
 
-        print(f"Listening at https://{self.__host}:{self.__port}")
+        self.__log(f"Listening at https://{self.__host}:{self.__port}")
 
         while not self.__stop_event.is_set():
             if self.__close_connections:
