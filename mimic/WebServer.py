@@ -219,7 +219,7 @@ class WebServer:
 
     def __log(self, message: str, level: int = logging.INFO) -> None:
         """
-        Send log messages over Pipe to the main process
+        Send log messages over Pipe to the main process.
 
         Args:
             message (str): Message content
