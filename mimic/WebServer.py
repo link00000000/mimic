@@ -12,6 +12,7 @@ from aiohttp import web
 from aiohttp.web_request import Request
 from aiohttp.web_response import Response, StreamResponse
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
+from aiortc.exceptions import InvalidStateError
 from aiortc.mediastreams import MediaStreamError
 from aiortc.rtcdatachannel import RTCDataChannel
 
@@ -65,7 +66,7 @@ class WebServer:
         async def offer(request: Request) -> StreamResponse:
             request_body = await request.json()
 
-            if request_body['sdp'] is None or request_body['type'] is None:
+            if request_body is None or request_body['sdp'] is None or request_body['type'] is None:
                 return web.Response(status=400, text="Bad request, must include 'sdp' and 'type'.")
 
             offer = RTCSessionDescription(
@@ -106,8 +107,18 @@ class WebServer:
             await pc.setRemoteDescription(offer)
 
             # send answer
-            answer = await pc.createAnswer()
-            await pc.setLocalDescription(answer)
+            try:
+                answer = await pc.createAnswer()
+                if answer is None:
+                    self.__log("Got empty answer", logging.ERROR)
+                    return web.Response(status=500)
+
+                await pc.setLocalDescription(answer)
+
+            except InvalidStateError as error:
+                self.__log(
+                    f"Failed to create peer connection: {str(error)}", logging.ERROR)
+                return web.Response(status=500)
 
             return web.Response(
                 content_type="application/json",
@@ -142,6 +153,10 @@ class WebServer:
         return func
 
     async def __on_shutdown(self) -> None:
+        if self.__video_stream is not None:
+            self.__video_stream.stop()
+            self.__video_stream = None
+
         # close peer connections
         coros = [pc.close() for pc in self.__peer_connections]
         await asyncio.gather(*coros)
@@ -167,8 +182,15 @@ class WebServer:
         while not self.__stop_event.is_set():
             await asyncio.sleep(1)
 
-        await self.__on_shutdown()
-        await runner.cleanup()
+        try:
+            await self.__on_shutdown()
+            await site.stop()
+            await runner.cleanup()
+            await runner.shutdown()
+            await app.shutdown()
+            await app.cleanup()
+        except:
+            pass
 
 
 def server_thread_runner(pipe: Connection, stop_event: Event) -> None:
