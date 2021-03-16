@@ -25,6 +25,9 @@ _MIME_TYPES = MimeTypes()
 _STALE_CONNECTION_INTERVAL: float = 5.0
 _PING_INTERVAL: float = 1.0
 
+_SSL_CERT = "certs/selfsigned.cert"
+_SSL_KEY = "certs/selfsigned.pem"
+
 middleware = Callable[[Request, Any], Coroutine[Any, Any, Any]]
 route_handler = Callable[[Request], Awaitable[Response]]
 
@@ -204,8 +207,7 @@ class WebServer:
 
     async def run(self) -> None:
         ssl_context = ssl.SSLContext()
-        ssl_context.load_cert_chain(
-            "./certs/selfsigned.cert", "./certs/selfsigned.pem")
+        ssl_context.load_cert_chain(_SSL_CERT, _SSL_KEY)
 
         app = web.Application(middlewares=self.__middlewares)
         app.router.add_routes(self.__routes)
