@@ -64,6 +64,9 @@ class WebServer:
 
         @self.__routes.post('/webrtc-offer')
         async def offer(request: Request) -> StreamResponse:
+            if len(self.__peer_connections) != 0:
+                return web.Response(status=409, text="Cannot acquire video stream, already in use.")
+
             request_body = await request.json()
 
             if request_body is None or request_body['sdp'] is None or request_body['type'] is None:
