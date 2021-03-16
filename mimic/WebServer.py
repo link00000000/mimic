@@ -180,7 +180,12 @@ class WebServer:
         print(f"Listening at https://{self.__host}:{self.__port}")
 
         while not self.__stop_event.is_set():
-            await asyncio.sleep(1)
+            if self.__video_stream is not None:
+                frame = await self.__video_stream.recv()
+                print("@TODO Handle video frames")
+
+            else:
+                await asyncio.sleep(1)
 
         try:
             await self.__on_shutdown()
