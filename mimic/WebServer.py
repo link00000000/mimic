@@ -29,7 +29,7 @@ class WebServer:
     __routes = web.RouteTableDef()
     __middlewares: list[middleware] = []
 
-    def __init__(self, host: str = resolve_host(), port: int = 8080, pipe: Connection = None, stop_event=Event()) -> None:
+    def __init__(self, host: str = resolve_host(), port: int = 8080, pipe: Connection = None, stop_event: Event = Event()) -> None:
         self.__host = host
         self.__port = port
         self.__pipe = pipe
