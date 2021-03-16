@@ -6,11 +6,9 @@ import ssl
 import uuid
 from threading import Thread
 
-import cv2
 from aiohttp import web
 from aiohttp.web_request import Request
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.media import MediaBlackhole, MediaPlayer
 
 from mimic.Utils.Host import resolve_host
 
@@ -66,10 +64,6 @@ class WebServer:
 
             log_info("Created for %s", request.remote)
 
-            # prepare local media
-            player = MediaPlayer(os.path.join(ROOT, "demo-instruct.wav"))
-            recorder = MediaBlackhole()
-
             @pc.on("datachannel")
             def on_datachannel(channel):
                 @channel.on("message")
@@ -91,11 +85,9 @@ class WebServer:
                 @track.on("ended")
                 async def on_ended():
                     log_info("Track %s ended", track.kind)
-                    await recorder.stop()
 
             # handle offer
             await pc.setRemoteDescription(offer)
-            await recorder.start()
 
             # send answer
             answer = await pc.createAnswer()
