@@ -25,7 +25,7 @@ route_handler = Callable[[Request], Awaitable[Response]]
 
 
 class WebServer:
-    __pcs: set[RTCPeerConnection] = set()
+    __peer_connections: set[RTCPeerConnection] = set()
     __routes = web.RouteTableDef()
     __middlewares: list[middleware] = []
 
@@ -48,11 +48,11 @@ class WebServer:
 
         @self.__routes.get('/close')
         async def close_connection(request: Request) -> StreamResponse:
-            for pc in self.__pcs:
+            for pc in self.__peer_connections:
                 await pc.close()
 
-            num_pcs = len(self.__pcs)
-            self.__pcs.clear()
+            num_pcs = len(self.__peer_connections)
+            self.__peer_connections.clear()
 
             return web.Response(text=f"Closed {num_pcs} connection(s)", status=200)
 
@@ -67,7 +67,7 @@ class WebServer:
                 sdp=request_body["sdp"], type=request_body["type"])
 
             pc = RTCPeerConnection()
-            self.__pcs.add(pc)
+            self.__peer_connections.add(pc)
 
             self.__log(f"Connection created for {request.remote}")
 
@@ -84,7 +84,7 @@ class WebServer:
                     f"Connection state is {pc.connectionState}", logging.DEBUG)
                 if pc.connectionState == "failed":
                     await pc.close()
-                    self.__pcs.discard(pc)
+                    self.__peer_connections.discard(pc)
 
             @pc.on("track")
             def on_track(track: MediaStreamTrack) -> None:
@@ -135,9 +135,9 @@ class WebServer:
 
     async def __on_shutdown(self) -> None:
         # close peer connections
-        coros = [pc.close() for pc in self.__pcs]
+        coros = [pc.close() for pc in self.__peer_connections]
         await asyncio.gather(*coros)
-        self.__pcs.clear()
+        self.__peer_connections.clear()
 
     async def start(self) -> None:
         ssl_context = ssl.SSLContext()
