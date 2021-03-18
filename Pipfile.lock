@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "fd739ca8b8c8c6491c0dab5560ecd96f58d54d085d814bc0893956cfae4e29f0"
+            "sha256": "f5e21a9fda0fa57e04d5134791157a79770cefc844729dbe3b689765e53b0ce0"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -528,6 +528,16 @@
             ],
             "index": "pypi",
             "version": "==0.1"
+        },
+        "pyvirtualcam": {
+            "hashes": [
+                "sha256:340432425023cc34091bdfc3b4a94dc6993fae6bb1a534102ab2190fbb876738",
+                "sha256:6a40e0e7176de19d7669ac450cc64b3f499e36c1b2e957053dd6cf2ac678e64e",
+                "sha256:b3174ad2471d55eeb449ae056d85c862fe7e7aec577a689b064bc6bb03bf0061",
+                "sha256:f92d40f45d5fb83ca2edd3304532ef4d5f8ad3d0cee32378dcb63e67c7d98938"
+            ],
+            "index": "pypi",
+            "version": "==0.3.2"
         },
         "six": {
             "hashes": [

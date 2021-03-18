@@ -12,6 +12,7 @@ pythonlangutil = "*"
 "infi.systray" = "*"
 pyqrcode = "*"
 pyopenssl = "*"
+pyvirtualcam = "==0.3.2"
 
 [dev-packages]
 autopep8 = "*"
