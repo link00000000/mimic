@@ -304,4 +304,7 @@ async function main() {
     document.getElementById('spinner').classList.remove('show')
 }
 
-main().catch((error) => alert(error))
+main().catch((error) => {
+    const errorMessage = error instanceof Error ? error.message : error
+    alert('An unhandled error has occurred!\n\nError: ' + errorMessage)
+})
