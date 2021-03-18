@@ -287,9 +287,7 @@ async function main() {
     videoPreviewElement.srcObject = mediaStream
 
     if (mediaStream.getTracks().length < 0) {
-        throw new Error(
-            'Could not access video track, try refreshing the page.'
-        )
+        throw new Error('Could not access video track.')
     }
 
     if (mediaStream.getTracks().length !== 1) {
@@ -317,8 +315,15 @@ async function main() {
     document.getElementById('spinner').classList.remove('show')
 }
 
+const REFRESH_TIMEOUT = 1000
+
 main().catch((error) => {
     // Display all uncaught errors
     const errorMessage = error instanceof Error ? error.message : error
-    alert(errorMessage)
+    alert(errorMessage + '\n\n*This page will automatically refresh.*')
+
+    // Wait for some time before refreshing incase the user cannot close the
+    // window with the alert open. We don't want their browser to get stuck in a
+    // refresh loop.
+    setTimeout(() => window.location.reload(), REFRESH_TIMEOUT)
 })
