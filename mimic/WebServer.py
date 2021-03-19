@@ -12,13 +12,17 @@ from aiohttp.web_request import Request
 from aiohttp.web_response import StreamResponse
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.mediastreams import MediaStreamError
+from aiortc.rtcdatachannel import RTCDataChannel
 from aiortc.rtcpeerconnection import RemoteStreamTrack
 from av import VideoFrame
 
 from mimic.Pipeable import LogMessage
 from mimic.Utils.Host import resolve_host
+from mimic.Utils.Time import RollingTimeout, latency, timestamp
 
 ROOT = "mimic/public"
+_STALE_CONNECTION_TIMEOUT = 5.0
+_PING_INTERVAL = 1.0
 
 
 async def start_web_server(stop_event: Event, pipe: Connection) -> None:
@@ -52,6 +56,9 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         pcs.clear()
 
         return num_pcs
+
+    heartbeat_timeout = RollingTimeout(
+        _STALE_CONNECTION_TIMEOUT, close_all_connections)
 
     @web.middleware
     async def logging_middleware(request: Request, handler) -> StreamResponse:
@@ -91,11 +98,23 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         log(f"Created for {request.remote}")
 
         @pc.on("datachannel")
-        def on_datachannel(channel):
+        def on_datachannel(channel: RTCDataChannel):
             @channel.on("message")
-            def on_message(message):
-                if isinstance(message, str) and message.startswith("ping"):
-                    channel.send("pong" + message[4:])
+            async def on_message(message):
+                if isinstance(message, str):
+                    if channel.label == 'latency':
+                        if message == '-1':
+                            heartbeat_timeout.start()
+                        else:
+                            round_trip_time = latency(int(message))
+                            log(f"Latency {round_trip_time}ms", logging.DEBUG)
+                            heartbeat_timeout.rollback()
+
+                        await asyncio.sleep(_PING_INTERVAL)
+                        try:
+                            channel.send(str(timestamp()))
+                        except:
+                            pass
 
         @pc.on("connectionstatechange")
         async def on_connectionstatechange():
