@@ -1,5 +1,4 @@
 import asyncio
-import io
 import json
 import logging
 import os
@@ -35,6 +34,9 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         frame_array[:, :, 3] = 255
 
         cam.send(frame_array)
+
+        # @NOTE Not sure if we need this but I'm going to leave it in case we
+        # ever need a case for it
         # cam.sleep_until_next_frame()
 
         return frame
@@ -74,6 +76,13 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
 
     async def offer(request: Request) -> StreamResponse:
         params = await request.json()
+
+        if params['sdp'] is None or params['type'] is None:
+            return web.Response(status=400, text="Required `sdp` and `type` are missing from request body.")
+
+        if len(pcs) != 0:
+            return web.Response(status=409, text='Attempting to make more than one connection simultaneously. Resource busy.')
+
         offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
         pc = RTCPeerConnection()
