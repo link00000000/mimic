@@ -57,8 +57,8 @@ def main() -> None:
     tray_icon.run()
 
     webserver_pipe, remote_webserver_pipe = Pipe()
-    server_process = Process(target=webserver_thread_runner, args=[
-        stop_event, remote_webserver_pipe])
+    server_process = Process(target=webserver_thread_runner, args=(
+        stop_event, remote_webserver_pipe))
     server_process.start()
 
     gui = GUI()
