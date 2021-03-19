@@ -29,6 +29,7 @@ uninstall_dlls = "python .scripts/uninstall_dlls.py"
 start = "python main.py"
 dev = "nodemon --watch main.py --watch mimic --ext py --exec python main.py" # Requires that nodemon is installed globally, this can be installed with `npm i -g nodemon`
 lint = "python .scripts/lint.py"
+pslint = "Powershell.exe -File .scripts/lint.ps1"
 lint-imports = "isort main.py mimic"
 lint-code = "autopep8 --in-place --recursive main.py mimic"
 lint-type_checking = "mypy main.py mimic --ignore-missing-imports"
