@@ -2,8 +2,9 @@
 import errno
 import os
 
-from mimic.Utils.Host import resolve_host
 from OpenSSL import crypto
+
+from mimic.Utils.Host import resolve_host
 
 _COMMON_NAME = resolve_host()
 _ORGANIZATION_NAME = "mimic"
