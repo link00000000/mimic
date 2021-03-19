@@ -60,7 +60,6 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         stop_event (Event): A flag that, when true, will graceully shut down the server
         pipe (Connection): Pipe connection to receive information from server
     """
-
     # All active RTC peer connections
     pcs: set[RTCPeerConnection] = set()
 
