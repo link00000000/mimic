@@ -5,6 +5,7 @@ import os
 import ssl
 from multiprocessing.connection import Connection
 from threading import Event
+from typing import Optional
 
 import pyvirtualcam
 from aiohttp import web
@@ -16,6 +17,7 @@ from aiortc.mediastreams import MediaStreamError
 from aiortc.rtcdatachannel import RTCDataChannel
 from aiortc.rtcpeerconnection import RemoteStreamTrack
 from av import VideoFrame
+from pyvirtualcam.camera import _WindowsCamera
 
 from mimic.Pipeable import LogMessage
 from mimic.Utils.Host import resolve_host
@@ -25,9 +27,10 @@ ROOT = "mimic/public"
 _STALE_CONNECTION_TIMEOUT = 5.0
 _PING_INTERVAL = 1.0
 
+cam: Optional[_WindowsCamera] = None
+
 
 async def start_web_server(stop_event: Event, pipe: Connection) -> None:
-    cam = pyvirtualcam.Camera(640, 480, 30)
     pcs: set[RTCPeerConnection] = set()
 
     async def show_frame(track: RemoteStreamTrack) -> VideoFrame:
@@ -35,8 +38,9 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
 
         # Format is a 2d array containing an RGBA tuples
         # 640x480
-        frame_array = frame.to_ndarray(format="rgba")
-        cam.send(frame_array)
+        if cam is not None:
+            frame_array = frame.to_ndarray(format="rgba")
+            cam.send(frame_array)
 
         # @NOTE Not sure if we need this but I'm going to leave it in case we
         # ever need a case for it
@@ -48,6 +52,9 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         pipe.send(LogMessage(message, level))
 
     async def close_all_connections() -> int:
+        if cam is not None:
+            cam.close()
+
         for pc in pcs:
             await pc.close()
 
@@ -139,6 +146,11 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
             @track.on("ended")
             async def on_ended():
                 log(f"Track {track.kind} ended")
+                if cam is not None:
+                    cam.close()
+
+            global cam
+            cam = pyvirtualcam.Camera(640, 480, 30)
 
             while True:
                 if track.readyState != "live":
@@ -187,7 +199,8 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
     while stop_event is None or not stop_event.is_set():
         await asyncio.sleep(0.05)
 
-    cam.close()
+    if cam is not None:
+        cam.close()
 
     await close_all_connections()
     await site.stop()
