@@ -1,135 +1,158 @@
-"""HTTP web server."""
 import asyncio
+import json
+import logging
 import os
 import ssl
-from mimetypes import MimeTypes
+from multiprocessing.connection import Connection
 from threading import Event
-from typing import Any, Callable, Coroutine, Optional
 
+import pyvirtualcam
 from aiohttp import web
-from aiohttp.web_app import Application
 from aiohttp.web_request import Request
+from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc.rtcpeerconnection import RemoteStreamTrack
+from av import VideoFrame
 
-from mimic.Pipeable import LogMessage, Pipeable
+from mimic.Pipeable import LogMessage
 from mimic.Utils.Host import resolve_host
-from mimic.Utils.SSL import generate_ssl_certs, ssl_certs_generated
 
-middleware = Callable[[Request, Any], Coroutine[Any, Any, Any]]
-mimetypes = MimeTypes()
+ROOT = "mimic/public"
 
-# Certificates can be generated with `pipenv run ssl_gencerts`
-SSL_CERT = "certs/selfsigned.cert"
-SSL_KEY = "certs/selfsigned.pem"
+logger = logging.getLogger("pc")
+pcs = set()
 
 
-class WebServer(Pipeable):
-    """
-    Async HTTP server, messages can be recieved by polling `pipe`.
+async def start_web_server(stop_event: Event, pipe: Connection):
+    cam = pyvirtualcam.Camera(640, 480, 30)
 
-    @NOTE Because we need access to `self` inside the route, all routes
-    must be defined inside of `__init__` instead of individual methods.
-    """
+    async def show_frame(track: RemoteStreamTrack) -> VideoFrame:
+        frame = await track.recv()
 
-    host: str
-    port: int
+        # Format is a 2d array containing an RGBA tuples
+        # 640x480
+        frame_array = frame.to_ndarray(format="rgba")
+        frame_array[:, :, 3] = 255
 
-    routes = web.RouteTableDef()
-    middlewares: list[middleware] = []
-    app: Application
+        cam.send(frame_array)
+        # cam.sleep_until_next_frame()
 
-    stop_event: Optional[Event]
+        return frame
 
-    runner: web.AppRunner
-    site: web.TCPSite
+    def log(message: str, level: int = logging.INFO):
+        pipe.send(LogMessage(message, level))
 
-    def __init__(self, host: str = resolve_host(), port=8080, stop_event: Event = None):
-        """
-        Initialize web server.
+    @web.middleware
+    async def logging_middleware(request: Request, handler):
+        log(f"{request.method} {request.path} - {request.remote}", logging.DEBUG)
+        return await handler(request)
 
-        Args:
-            host (str, optional): Host to listen to HTTP traffic on. Defaults to `resolve_host()`.
-            port (int, optional): Port to listen to HTTP traffic on. Defaults to 8080.
-            stop_event (Event, optional): When set, the web server will shutdown. Defaults to None.
-        """
-        super().__init__()
+    async def index(request):
+        content = open(os.path.join(ROOT, "index.html"), "r").read()
+        return web.Response(content_type="text/html", text=content)
 
-        self.host = host
-        self.port = port
+    async def javascript(request):
+        content = open(os.path.join(ROOT, "app.js"), "r").read()
+        return web.Response(content_type="application/javascript", text=content)
 
-        self.stop_event = stop_event
+    async def css(request):
+        content = open(os.path.join(ROOT, "app.css"), "r").read()
+        return web.Response(content_type="text/css", text=content)
 
-        @web.middleware
-        async def loggerMiddleware(request: Request, handler):
-            self._pipe.send(LogMessage(f'{request.method} {request.path}'))
+    async def offer(request):
+        params = await request.json()
+        offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
-            return await handler(request)
-        self.middlewares.append(loggerMiddleware)
+        pc = RTCPeerConnection()
+        pcs.add(pc)
 
-        # Routes must be initialized inside the constructor so that we have access
-        # to `self`
-        @self.routes.get('/')
-        async def index(request: Request):
-            """Return public/index.html as entrypoint."""
-            content: str
-            with open(os.path.abspath("mimic/public/index.html"), "r") as file:
-                content = file.read()
+        log(f"Created for {request.remote}")
 
-            return web.Response(content_type="text/html", text=content)
+        @pc.on("datachannel")
+        def on_datachannel(channel):
+            @channel.on("message")
+            def on_message(message):
+                if isinstance(message, str) and message.startswith("ping"):
+                    channel.send("pong" + message[4:])
 
-        @self.routes.get(r'/{filename:.+}')
-        async def static(request: Request):
-            """
-            Return file contents of files located in public directory.
+        @pc.on("connectionstatechange")
+        async def on_connectionstatechange():
+            log(f"Connection state is {pc.connectionState}")
+            if pc.connectionState == "failed":
+                await pc.close()
+                pcs.discard(pc)
 
-            If file is not found, return status code 404. Mime type of file is
-            guessed based off of file extension.
-            """
-            filename = os.path.abspath(os.path.join(
-                'mimic/public', request.match_info['filename']))
+        @pc.on("track")
+        async def on_track(track):
+            log(f"Track {track.kind} received")
 
-            if not os.path.exists(filename):
-                return web.Response(status=404)
-
-            with open(filename, "r") as file:
-                content = file.read()
-
-            mime = mimetypes.guess_type(filename)[0]
-            return web.Response(content_type=mime, text=content)
-
-    async def start(self):
-        """Start listening to HTTP traffic."""
-        self._pipe.send(LogMessage("Web server starting..."))
-
-        self.app = web.Application(middlewares=self.middlewares)
-        self.app.add_routes(self.routes)
-
-        self.runner = web.AppRunner(self.app)
-        await self.runner.setup()
-
-        if not ssl_certs_generated(SSL_CERT, SSL_KEY):
-            self._pipe.send(LogMessage(
-                "SSL certificate and key not found! Generating SSL certificate and key..."))
-            generate_ssl_certs(SSL_CERT, SSL_KEY)
-            self._pipe.send(LogMessage("SSL certificate and key generated."))
-        else:
-            self._pipe.send(LogMessage("SSL certificate and key found."))
-
-        ssl_context = ssl.SSLContext()
-        ssl_context.load_cert_chain(SSL_CERT, SSL_KEY)
-
-        self.site = web.TCPSite(self.runner, self.host,
-                                self.port, ssl_context=ssl_context)
-        await self.site.start()
-
-        self._pipe.send(LogMessage(
-            f"Web server listening at https://{resolve_host()}:{self.port}"))
-
-        # Loop infinitely in 1 second intervals
-        while True:
-            # If the `stop_event` has been set, cleanup and close the HTTP
-            # server
-            if(self.stop_event != None and self.stop_event.is_set()):
-                await self.runner.cleanup()
+            if track.kind != "video":
+                track.stop()
                 return
 
-            await asyncio.sleep(1)
+            while True:
+                if track.readyState != "live":
+                    break
+
+                await show_frame(track)
+
+            @track.on("ended")
+            async def on_ended():
+                log(f"Track {track.kind} ended")
+
+        # handle offer
+        await pc.setRemoteDescription(offer)
+
+        # send answer
+        answer = await pc.createAnswer()
+        await pc.setLocalDescription(answer)
+
+        return web.Response(
+            content_type="application/json",
+            text=json.dumps(
+                {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+            ),
+        )
+
+    async def shutdown():
+        # close peer connections
+        coros = [pc.close() for pc in pcs]
+        await asyncio.gather(*coros)
+        pcs.clear()
+
+    ssl_context = ssl.SSLContext()
+    ssl_context.load_cert_chain(
+        "certs/selfsigned.cert", "certs/selfsigned.pem")
+
+    app = web.Application(middlewares=[logging_middleware])
+    app.router.add_get("/", index)
+    app.router.add_get("/app.js", javascript)
+    app.router.add_get("/app.css", css)
+    app.router.add_post("/offer", offer)
+
+    runner = web.AppRunner(app, handle_signals=True)
+    await runner.setup()
+
+    site = web.TCPSite(runner, host=resolve_host(),
+                       port=8080, ssl_context=ssl_context)
+    await site.start()
+
+    log(f"Server listening at https://{resolve_host()}:8080")
+
+    while stop_event is None or not stop_event.is_set():
+        await asyncio.sleep(1)
+
+    cam.close()
+
+    await shutdown()
+    await site.stop()
+    await runner.shutdown()
+    await runner.cleanup()
+    await app.shutdown()
+    await app.cleanup()
+
+
+def webserver_thread_runner(stop_event: Event, pipe: Connection):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(start_web_server(stop_event, pipe))
