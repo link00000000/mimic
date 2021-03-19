@@ -11,6 +11,7 @@ from aiohttp import web
 from aiohttp.web_request import Request
 from aiohttp.web_response import StreamResponse
 from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc.exceptions import InvalidStateError
 from aiortc.mediastreams import MediaStreamError
 from aiortc.rtcdatachannel import RTCDataChannel
 from aiortc.rtcpeerconnection import RemoteStreamTrack
@@ -35,8 +36,6 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         # Format is a 2d array containing an RGBA tuples
         # 640x480
         frame_array = frame.to_ndarray(format="rgba")
-        frame_array[:, :, 3] = 255
-
         cam.send(frame_array)
 
         # @NOTE Not sure if we need this but I'm going to leave it in case we
@@ -103,6 +102,8 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
             async def on_message(message):
                 if isinstance(message, str):
                     if channel.label == 'latency':
+                        # If we recieve a -1, then it is the first message
+                        # and the rolling timout should be started
                         if message == '-1':
                             heartbeat_timeout.start()
                         else:
@@ -113,7 +114,11 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
                         await asyncio.sleep(_PING_INTERVAL)
                         try:
                             channel.send(str(timestamp()))
-                        except:
+                        except InvalidStateError:
+                            # Theres a chance the server will try to send a
+                            # message after the connection is closed,
+                            # raising an `InvalidStateError`. We should just
+                            # ignore those.
                             pass
 
         @pc.on("connectionstatechange")
