@@ -25,7 +25,6 @@ import logging
 from multiprocessing import Event, Pipe, Process
 from signal import SIGINT, SIGTERM, signal
 from sys import stdout
-# from threading import Event, Thread
 from types import FrameType
 
 from mimic.GUI.GUI import GUI
