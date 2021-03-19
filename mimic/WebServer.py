@@ -1,3 +1,22 @@
+"""
+HTTP webserver with WebRTC video stream capabilities.
+
+Only a single WebRTC video stream is allowed at a time. The video stream is
+forwarded to pyvirtualcam.
+
+After a ping message has not been sent for `_STALE_CONNECTION_TIMEOUT` seconds,
+connections are automatically closed.
+
+RTC data channels:
+- latency - Ping messages are sent between the client and server periodically
+  every `_PING_INTERVAL` seconds to make sure the connection is still alive and
+  record round time time in
+  milliseconds
+- metadata - A single message is sent from the client during initial connection
+  containing a JSON object with information about the video stream (see `MetaData`)
+- 
+"""
+
 import asyncio
 import json
 import logging
@@ -6,7 +25,7 @@ import ssl
 from json.decoder import JSONDecodeError
 from multiprocessing.connection import Connection
 from threading import Event
-from typing import Optional
+from typing import Awaitable, Callable, Optional
 
 import pyvirtualcam
 from aiohttp import web
@@ -17,7 +36,6 @@ from aiortc.exceptions import InvalidStateError
 from aiortc.mediastreams import MediaStreamError
 from aiortc.rtcdatachannel import RTCDataChannel
 from aiortc.rtcpeerconnection import RemoteStreamTrack
-from av import VideoFrame
 from pyvirtualcam.camera import _WindowsCamera
 
 from mimic.MetaData import MetaData
@@ -33,9 +51,26 @@ cam: Optional[_WindowsCamera] = None
 
 
 async def start_web_server(stop_event: Event, pipe: Connection) -> None:
+    """
+    Set up and run the web server main loop.
+
+    Server will gracefully shut down when `stop_event` flag is set.
+
+    Args:
+        stop_event (Event): A flag that, when true, will graceully shut down the server
+        pipe (Connection): Pipe connection to receive information from server
+    """
+
+    # All active RTC peer connections
     pcs: set[RTCPeerConnection] = set()
 
-    async def show_frame(track: RemoteStreamTrack) -> VideoFrame:
+    async def show_frame(track: RemoteStreamTrack) -> None:
+        """
+        Get a frame from a `RemoteStreamTrack` and paint it to the pyvirtualcam video buffer.
+
+        Args:
+            track (RemoteStreamTrack): Video track from WebRTC connection
+        """
         frame = await track.recv()
 
         # Format is a 2d array containing an RGBA tuples
@@ -48,12 +83,23 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         # ever need a case for it
         # cam.sleep_until_next_frame()
 
-        return frame
-
     def log(message: str, level: int = logging.INFO):
+        """
+        Send a log message through communication pipe.
+
+        Args:
+            message (str): Log message content
+            level (int, optional): Logging level. Defaults to logging.INFO.
+        """
         pipe.send(LogMessage(message, level))
 
     async def close_all_connections() -> int:
+        """
+        Close all open WebRTC connections and media streams.
+
+        Returns:
+            int: Number of connections that were closed
+        """
         if cam is not None:
             cam.close()
 
@@ -65,11 +111,23 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
 
         return num_pcs
 
+    # Rolling timeout that closes all peer connections after the client has not
+    # responded for some time
     heartbeat_timeout = RollingTimeout(
         _STALE_CONNECTION_TIMEOUT, close_all_connections)
 
     @web.middleware
-    async def logging_middleware(request: Request, handler) -> StreamResponse:
+    async def logging_middleware(request: Request, handler: Callable[[Request], Awaitable[StreamResponse]]) -> StreamResponse:
+        """
+        Send `LogMessage` through communication pipe for every HTTP request.
+
+        Args:
+            request (Request): HTTP request from http server
+            handler ([type]): Handler to be executed after middleware
+
+        Returns:
+            StreamResponse: HTTP response after handler is executed
+        """
         log(f"{request.method} {request.path} - {request.remote}", logging.DEBUG)
         return await handler(request)
 
@@ -132,7 +190,6 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
 
                     if channel.label == 'metadata':
                         try:
-                            log(f"GOT METADATA: {message}")
                             metadata = MetaData(message)
 
                             try:
@@ -193,6 +250,7 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
             ),
         )
 
+    # Start HTTP server
     ssl_context = ssl.SSLContext()
     ssl_context.load_cert_chain(
         "certs/selfsigned.cert", "certs/selfsigned.pem")
@@ -213,9 +271,11 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
 
     log(f"Server listening at https://{resolve_host()}:8080")
 
+    # Main loop
     while stop_event is None or not stop_event.is_set():
         await asyncio.sleep(0.05)
 
+    # Clean up and close server
     if cam is not None:
         cam.close()
 
@@ -228,6 +288,18 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
 
 
 def webserver_thread_runner(stop_event: Event, pipe: Connection):
+    """
+    Initialize asyncio event loop and start web server.
+
+    Typically be used as target for spawning threads or child processes.
+
+    @NOTE The event loop must not already be running. It is likely that the
+    event loop is already running on the mean thread if you are using asyncio.
+
+    Args:
+        stop_event (Event): A flag that, when true, will graceully shut down the server
+        pipe (Connection): Pipe connection to receive information from server
+    """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 

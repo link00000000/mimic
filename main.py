@@ -38,7 +38,7 @@ from mimic.WebServer import webserver_thread_runner
 stop_event = Event()
 
 
-def stop_handler(signal_number: int, frame: FrameType):
+def stop_handler(signal_number: int, frame: FrameType) -> None:
     """
     Handle stop signal events.
 
@@ -49,7 +49,7 @@ def stop_handler(signal_number: int, frame: FrameType):
     stop_event.set()
 
 
-def main():
+def main() -> None:
     """Mimic main entrypoint."""
     signal(SIGINT, stop_handler)
     signal(SIGTERM, stop_handler)
