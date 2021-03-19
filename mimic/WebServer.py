@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import ssl
+from json.decoder import JSONDecodeError
 from multiprocessing.connection import Connection
 from threading import Event
 from typing import Optional
@@ -19,6 +20,7 @@ from aiortc.rtcpeerconnection import RemoteStreamTrack
 from av import VideoFrame
 from pyvirtualcam.camera import _WindowsCamera
 
+from mimic.MetaData import MetaData
 from mimic.Pipeable import LogMessage
 from mimic.Utils.Host import resolve_host
 from mimic.Utils.Time import RollingTimeout, latency, timestamp
@@ -128,6 +130,24 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
                             # ignore those.
                             pass
 
+                    if channel.label == 'metadata':
+                        try:
+                            log(f"GOT METADATA: {message}")
+                            metadata = MetaData(message)
+
+                            try:
+                                global cam
+                                cam = pyvirtualcam.Camera(
+                                    metadata.width, metadata.height, metadata.framerate)
+                            except RuntimeError as error:
+                                log(str(error), logging.ERROR)
+                                cam = None
+                                await close_all_connections()
+
+                        except (KeyError, TypeError, JSONDecodeError) as error:
+                            log(str(error), logging.ERROR)
+                            await close_all_connections()
+
         @pc.on("connectionstatechange")
         async def on_connectionstatechange():
             log(f"Connection state is {pc.connectionState}")
@@ -148,9 +168,6 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
                 log(f"Track {track.kind} ended")
                 if cam is not None:
                     cam.close()
-
-            global cam
-            cam = pyvirtualcam.Camera(640, 480, 30)
 
             while True:
                 if track.readyState != "live":
