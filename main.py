@@ -21,11 +21,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import asyncio
 import logging
+from multiprocessing import Event, Pipe, Process
 from signal import SIGINT, SIGTERM, signal
 from sys import stdout
-from threading import Event, Thread
 from types import FrameType
 
 from mimic.GUI.GUI import GUI
@@ -33,12 +32,12 @@ from mimic.Logging.AsyncLoggingHandler import AsyncFileHandler
 from mimic.Logging.TkinterLoggingHandler import TkinterTextHandler
 from mimic.Pipeable import LogMessage, StringMessage
 from mimic.TrayIcon import TrayIcon
-from mimic.WebServer import WebServer
+from mimic.WebServer import webserver_thread_runner
 
 stop_event = Event()
 
 
-def stop_handler(signal_number: int, frame: FrameType):
+def stop_handler(signal_number: int, frame: FrameType) -> None:
     """
     Handle stop signal events.
 
@@ -49,20 +48,7 @@ def stop_handler(signal_number: int, frame: FrameType):
     stop_event.set()
 
 
-def run_server(server: WebServer):
-    """
-    Initialize and run the web server on a worker thread.
-
-    Args:
-        server (WebServer): Web server instance
-    """
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    loop.run_until_complete(server.start())
-
-
-def main():
+def main() -> None:
     """Mimic main entrypoint."""
     signal(SIGINT, stop_handler)
     signal(SIGTERM, stop_handler)
@@ -70,9 +56,10 @@ def main():
     tray_icon = TrayIcon(stop_event=stop_event)
     tray_icon.run()
 
-    server = WebServer(stop_event=stop_event)
-    server_thread = Thread(target=run_server, args=[server])
-    server_thread.start()
+    webserver_pipe, remote_webserver_pipe = Pipe()
+    server_process = Process(target=webserver_thread_runner, args=(
+        stop_event, remote_webserver_pipe))
+    server_process.start()
 
     gui = GUI()
 
@@ -94,23 +81,11 @@ def main():
             break
 
         # Get data from web server
-        if server.pipe.poll():
-            data = server.pipe.recv()
+        if webserver_pipe.poll():
+            data = webserver_pipe.recv()
 
             if data.isType(LogMessage):
-                level = data.level
-                payload = data.payload
-
-                if level is logging.DEBUG:
-                    webserver_logger.debug(payload)
-                elif level is logging.INFO:
-                    webserver_logger.info(payload)
-                elif level is logging.WARNING:
-                    webserver_logger.warning(payload)
-                elif level is logging.ERROR:
-                    webserver_logger.error(payload)
-                elif level is logging.CRITICAL:
-                    webserver_logger.critical(payload)
+                webserver_logger.log(data.level, data.payload)
 
         # Get data from tray icon
         if tray_icon.pipe.poll():
@@ -123,7 +98,7 @@ def main():
         gui.update_idletasks()
         gui.update()
 
-    server_thread.join()
+    server_process.join()
 
 
 if __name__ == "__main__":
