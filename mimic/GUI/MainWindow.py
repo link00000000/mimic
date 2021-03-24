@@ -29,7 +29,7 @@ class MainWindow(AbstractTkinterWindow, EventEmitter):
         self.create_widgets()
 
         # Gracefully exit when the close button ("x button") is clicked
-        self.protocol("WM_DELETE_WINDOW", self.quit)
+        self.protocol("WM_DELETE_WINDOW", self.hide)
 
     def create_widgets(self):
         """Register widgets to window."""
