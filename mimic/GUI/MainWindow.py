@@ -28,7 +28,7 @@ class MainWindow(AbstractTkinterWindow, EventEmitter):
         self.master = master
         self.create_widgets()
 
-        # Gracefully exit when the close button ("x button") is clicked
+        # Hide when the close button ("x button") is clicked
         self.protocol("WM_DELETE_WINDOW", self.hide)
 
     def create_widgets(self):
