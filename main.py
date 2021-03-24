@@ -94,6 +94,9 @@ def main() -> None:
             if message == "show_debug_logs":
                 gui.debug_log_window.show()
 
+            if message == "show_qr_code":
+                gui.main_window.show()
+
         # Update GUI
         gui.update_idletasks()
         gui.update()
