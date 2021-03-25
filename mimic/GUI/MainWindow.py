@@ -26,7 +26,7 @@ class MainWindow(AbstractTkinterWindow, EventEmitter):
         super().__init__(master)
 
         self.master = master
-        self.title = "Mimic"
+        self.title("Mimic")
         self.hide()
 
         self.create_widgets()
