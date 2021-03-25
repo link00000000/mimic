@@ -28,20 +28,10 @@ class MainWindow(AbstractTkinterWindow, EventEmitter):
         self.master = master
         self.create_widgets()
 
-        # Gracefully exit when the close button ("x button") is clicked
-        self.protocol("WM_DELETE_WINDOW", self.quit)
+        # Hide when the close button ("x button") is clicked
+        self.protocol("WM_DELETE_WINDOW", self.hide)
 
     def create_widgets(self):
         """Register widgets to window."""
         qr_code = QRCodeImage(self, f"https://{resolve_host()}:8080")
         qr_code.pack()
-
-    def quit(self):
-        """
-        Destory GUI and emit `quit`.
-
-        Cleanup and gracefully destory master Tkinter instance and emit
-        a `quit` event.
-        """
-        self.master.destroy()
-        self._emit("quit")

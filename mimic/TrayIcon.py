@@ -44,6 +44,7 @@ class TrayIcon(Pipeable):
         self._hover_text = hover_text
 
         self._menu_options = [
+            ("Show QR code", None, lambda icon: self._pipe.send("show_qr_code")),
             ("Show debug logs", None, lambda icon: self._pipe.send("show_debug_logs"))
         ]
 
