@@ -53,7 +53,7 @@ def main() -> None:
     signal(SIGINT, stop_handler)
     signal(SIGTERM, stop_handler)
 
-    tray_icon = TrayIcon(hover_text="Mimic", stop_event=stop_event)
+    tray_icon = TrayIcon(icon_image="mimic_logo.ico", hover_text="Mimic", stop_event=stop_event)
     tray_icon.run()
 
     webserver_pipe, remote_webserver_pipe = Pipe()
