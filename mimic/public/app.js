@@ -287,11 +287,11 @@ class LatencyDataChannel {
 async function replaceVideoTrack(sender, metadataDataChannel) {
     const mediaDevices = await getMedia(CONSTRAINTS)
 
-    if (mediaStream.getVideoTracks().length < 0) {
+    if (mediaDevices.getVideoTracks().length < 0) {
         throw new Error('Could not access video track')
     }
 
-    if (mediaStream.getVideoTracks().length !== 1) {
+    if (mediaDevices.getVideoTracks().length !== 1) {
         console.warn(
             'More than 1 video track found. Only the first track will be used.'
         )
@@ -317,25 +317,25 @@ async function main() {
     const latencyDataChannel = new LatencyDataChannel(peerConnection)
     const metadataDataChannel = new MetadataDataChannel(peerConnection)
 
-    const mediaStream = await getMedia(CONSTRAINTS)
+    const mediaDevices = await getMedia(CONSTRAINTS)
 
     // Render video preview to html video element
     let videoPreviewElement = document.getElementById('video-preview')
-    videoPreviewElement.srcObject = mediaStream
+    videoPreviewElement.srcObject = mediaDevices
 
-    if (mediaStream.getVideoTracks().length < 0) {
+    if (mediaDevices.getVideoTracks().length < 0) {
         throw new Error('Could not access video track')
     }
 
-    if (mediaStream.getVideoTracks().length !== 1) {
+    if (mediaDevices.getVideoTracks().length !== 1) {
         console.warn(
             'More than 1 video track found. Only the first track will be used.'
         )
     }
 
     // Bind video track to RTC connection
-    const track = mediaStream.getTracks()[0]
-    const sender = peerConnection.addTrack(track, mediaStream)
+    const track = mediaDevices.getTracks()[0]
+    const sender = peerConnection.addTrack(track, mediaDevices)
 
     // Establish connection to server
     await negotiate(peerConnection)
