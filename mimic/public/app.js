@@ -7,6 +7,12 @@ CONSTRAINTS = {
         frameRate: 30
     }
 }
+
+/**
+ * Enable `console.log` in iOS safari.
+ *
+ * By default, `console.log` is NOP in iOS Safari.
+ */
 function enableSafariConsoleLog() {
     var userAgent = window.navigator.userAgent
 
