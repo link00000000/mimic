@@ -94,6 +94,7 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         # cam.sleep_until_next_frame()
 
     def show_static_frame() -> None:
+        """Paint static image to camera frame buffer."""
         buffer_height, buffer_width = _NO_CAMERA_IMAGE.shape[:2]
 
         global cam
@@ -119,8 +120,10 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         Returns:
             int: Number of connections that were closed
         """
+        global cam
         if cam is not None:
             cam.close()
+            cam = None
 
             global is_cam_idle
             is_cam_idle = True
@@ -231,7 +234,7 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
                                 for _ in range(_MAX_CAMERA_INIT_RETRY):
                                     try:
                                         cam = pyvirtualcam.Camera(
-                                            metadata.width, metadata.height, metadata.framerate)
+                                            metadata.width, metadata.height, metadata.framerate, delay=0)
                                         break
                                     except RuntimeError as error:
                                         if error.args[0] != "error starting virtual camera output":
@@ -276,8 +279,11 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
             @track.on("ended")
             async def on_ended():
                 log(f"Track {track.kind} ended")
+
+                global cam
                 if cam is not None:
                     cam.close()
+                    cam = None
 
                     global is_cam_idle
                     is_cam_idle = True
@@ -364,4 +370,3 @@ def webserver_thread_runner(stop_event: Event, pipe: Connection):
     loop.set_exception_handler(lambda loop, context: print(loop, context))
 
     loop.run_until_complete(start_web_server(stop_event, pipe))
-    print("DONE")
