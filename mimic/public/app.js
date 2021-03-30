@@ -311,6 +311,17 @@ async function main() {
         track.getSettings().height,
         track.getSettings().frameRate
     )
+
+    document.addEventListener(
+        'beforeunload',
+        () => {
+            peerConnection.close()
+        },
+        false
+    )
 }
 
-main().catch((error) => alert(error))
+main().catch((error) => {
+    alert(error)
+    console.error(error)
+})
