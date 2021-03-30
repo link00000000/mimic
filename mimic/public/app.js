@@ -1,3 +1,11 @@
+function enableSafariConsoleLog() {
+    var userAgent = window.navigator.userAgent
+
+    if (userAgent.match(/iPad/i) || userAgent.match(/iPhone/i)) {
+        console.log = console.info
+    }
+}
+
 /**
  * Gets the media stream from the browser
  * @param {MediaConstraints} constraints Media contraints defined by the MediaStream API
@@ -260,6 +268,8 @@ class LatencyDataChannel {
 }
 
 async function main() {
+    enableSafariConsoleLog()
+
     const peerConnection = createPeerConnection()
     const latencyDataChannel = new LatencyDataChannel(peerConnection)
     const metadataDataChannel = new MetadataDataChannel(peerConnection)
