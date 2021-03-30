@@ -1,3 +1,6 @@
+// Milliseconds to wait before resfreshing the page on error
+const RESFRESH_TIMEOUT = 1000
+
 /**
  * Gets the media stream from the browser
  * @param {MediaConstraints} constraints Media contraints defined by the MediaStream API
@@ -319,5 +322,10 @@ async function main() {
 
 main().catch((error) => {
     const errorMessage = error instanceof Error ? error.message : error
-    alert(errorMessage)
+    alert(errorMessage + '\n\n*This page will automatically refresh.*')
+
+    // Wait for some time before refreshing incase the user cannot close the
+    // window with the alert open. We don't want their browser to get stuck in a
+    // refresh loop.
+    setTimeout(() => window.location.reload(), REFRESH_TIMEOUT)
 })
