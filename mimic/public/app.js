@@ -284,11 +284,11 @@ async function main() {
     let videoPreviewElement = document.getElementById('video-preview')
     videoPreviewElement.srcObject = mediaStream
 
-    if (mediaStream.getTracks().length < 0) {
+    if (mediaStream.getVideoTracks().length < 0) {
         throw new Error('Could not access video track')
     }
 
-    if (mediaStream.getTracks().length !== 1) {
+    if (mediaStream.getVideoTracks().length !== 1) {
         console.warn(
             'More than 1 video track found. Only the first track will be used.'
         )
