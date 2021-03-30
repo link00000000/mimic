@@ -297,17 +297,18 @@ async function replaceVideoTrack(sender, metadataDataChannel) {
         )
     }
 
-    // Replace current video track with new track
     const track = mediaDevices.getVideoTracks()[0]
-    sender.replaceTrack(track)
 
-    // Send metadata to server after initial connection
+    // Send metadata to server
     await metadataDataChannel.waitForOpen()
     metadataDataChannel.sendMetadata(
         track.getSettings().width,
         track.getSettings().height,
         track.getSettings().frameRate
     )
+
+    // Replace current video track with new track
+    sender.replaceTrack(track)
 }
 
 async function main() {
