@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import ssl
+import time
 from json.decoder import JSONDecodeError
 from multiprocessing.connection import Connection
 from threading import Event
@@ -46,6 +47,8 @@ from mimic.Utils.Time import RollingTimeout, latency, timestamp
 ROOT = "mimic/public"
 _STALE_CONNECTION_TIMEOUT = 5.0
 _PING_INTERVAL = 1.0
+_MAX_CAMERA_INIT_RETRY = 5
+_CAMERA_INIT_RETRY_INTERVAL = 1
 
 cam: Optional[_WindowsCamera] = None
 
@@ -193,8 +196,36 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
 
                             try:
                                 global cam
-                                cam = pyvirtualcam.Camera(
-                                    metadata.width, metadata.height, metadata.framerate)
+                                if cam is not None:
+                                    cam.close()
+                                    cam = None
+
+                                log(f"Start camera with metadata: {metadata.width}x{metadata.height}@{metadata.framerate}",
+                                    logging.DEBUG)
+
+                                # HWND needs time to free before allocation of new camera
+                                # See: https://github.com/link00000000/mimic/issues/41
+                                for _ in range(_MAX_CAMERA_INIT_RETRY):
+                                    try:
+                                        cam = pyvirtualcam.Camera(
+                                            metadata.width, metadata.height, metadata.framerate)
+                                        break
+                                    except RuntimeError as error:
+                                        if error.args[0] != "error starting virtual camera output":
+                                            raise error
+
+                                        log("Failed to acquire camera, trying again...",
+                                            logging.WARNING)
+
+                                        # If we were unable to acquire the camera, wait for some time and try
+                                        # again
+                                        time.sleep(_CAMERA_INIT_RETRY_INTERVAL)
+
+                                # If we could not acquire the camera after a few tries, raise an exception
+                                if cam is None:
+                                    raise RuntimeError(
+                                        "error starting virtual camera output")
+
                             except RuntimeError as error:
                                 log(str(error), logging.ERROR)
                                 cam = None
@@ -207,7 +238,7 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         @pc.on("connectionstatechange")
         async def on_connectionstatechange():
             log(f"Connection state is {pc.connectionState}")
-            if pc.connectionState == "failed":
+            if pc.connectionState == "failed" or pc.connectionState == "closed":
                 await pc.close()
                 pcs.discard(pc)
 
@@ -301,5 +332,7 @@ def webserver_thread_runner(stop_event: Event, pipe: Connection):
     """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+    loop.set_exception_handler(lambda loop, context: print(loop, context))
 
     loop.run_until_complete(start_web_server(stop_event, pipe))
+    print("DONE")
