@@ -207,7 +207,7 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         @pc.on("connectionstatechange")
         async def on_connectionstatechange():
             log(f"Connection state is {pc.connectionState}")
-            if pc.connectionState == "failed":
+            if pc.connectionState == "failed" or pc.connectionState == "closed":
                 await pc.close()
                 pcs.discard(pc)
 
