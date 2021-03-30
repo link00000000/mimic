@@ -309,6 +309,8 @@ async function replaceVideoTrack(sender, metadataDataChannel) {
 
     // Replace current video track with new track
     sender.replaceTrack(track)
+
+    return mediaDevices
 }
 
 async function main() {
@@ -361,8 +363,12 @@ async function main() {
     // Update the video track to use new resolution on orientation change
     window.addEventListener(
         'orientationchange',
-        () => {
-            replaceVideoTrack(sender, metadataDataChannel)
+        async() => {
+            const mediaDevices = await replaceVideoTrack(
+                sender,
+                metadataDataChannel
+            )
+            videoPreviewElement.srcObject = mediaDevices
         },
         false
     )
