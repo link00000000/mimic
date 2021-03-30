@@ -277,6 +277,39 @@ class LatencyDataChannel {
     }
 }
 
+/**
+ * Reuse existing RTP Sender to send a different video stream without the need
+ * of renegotiation.
+ * @param {RTCRtpSender} sender Sender that is sending the video stream
+ * @param {RTCDataChannel} metadataDataChannel Data channel used to send video
+ * track metadata
+ */
+async function replaceVideoTrack(sender, metadataDataChannel) {
+    const mediaDevices = await getMedia(CONSTRAINTS)
+
+    if (mediaStream.getVideoTracks().length < 0) {
+        throw new Error('Could not access video track')
+    }
+
+    if (mediaStream.getVideoTracks().length !== 1) {
+        console.warn(
+            'More than 1 video track found. Only the first track will be used.'
+        )
+    }
+
+    // Replace current video track with new track
+    const track = mediaDevices.getVideoTracks()[0]
+    sender.replaceTrack(track)
+
+    // Send metadata to server after initial connection
+    await metadataDataChannel.waitForOpen()
+    metadataDataChannel.sendMetadata(
+        track.getSettings().width,
+        track.getSettings().height,
+        track.getSettings().frameRate
+    )
+}
+
 async function main() {
     enableSafariConsoleLog()
 
@@ -302,7 +335,7 @@ async function main() {
 
     // Bind video track to RTC connection
     const track = mediaStream.getTracks()[0]
-    peerConnection.addTrack(track, mediaStream)
+    const sender = peerConnection.addTrack(track, mediaStream)
 
     // Establish connection to server
     await negotiate(peerConnection)
@@ -320,6 +353,15 @@ async function main() {
         'beforeunload',
         () => {
             peerConnection.close()
+        },
+        false
+    )
+
+    // Update the video track to use new resolution on orientation change
+    window.addEventListener(
+        'orientationchange',
+        () => {
+            replaceVideoTrack(sender, metadataDataChannel)
         },
         false
     )

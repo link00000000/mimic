@@ -193,6 +193,11 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
 
                             try:
                                 global cam
+                                if cam is not None:
+                                    cam.close()
+
+                                log(f"Start camera with metadata: {metadata.width}x{metadata.height}@{metadata.framerate}",
+                                    logging.DEBUG)
                                 cam = pyvirtualcam.Camera(
                                     metadata.width, metadata.height, metadata.framerate)
                             except RuntimeError as error:
