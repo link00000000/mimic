@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import ssl
+import time
 from json.decoder import JSONDecodeError
 from multiprocessing.connection import Connection
 from threading import Event
@@ -195,6 +196,10 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
                                 global cam
                                 if cam is not None:
                                     cam.close()
+                                    
+                                    # HWND needs time to free before allocation of new camera
+                                    # See: https://github.com/link00000000/mimic/issues/41
+                                    time.sleep(1)
 
                                 log(f"Start camera with metadata: {metadata.width}x{metadata.height}@{metadata.framerate}",
                                     logging.DEBUG)
