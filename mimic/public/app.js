@@ -309,7 +309,8 @@ async function main() {
         track.getSettings().frameRate
     )
 
-    document.addEventListener(
+    // Close connection when page closes
+    window.addEventListener(
         'beforeunload',
         () => {
             peerConnection.close()
