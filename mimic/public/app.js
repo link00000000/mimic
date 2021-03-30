@@ -301,6 +301,8 @@ async function main() {
         track.getSettings().height,
         track.getSettings().frameRate
     )
+
+    document.getElementById('spinner').classList.remove('show')
 }
 
 main().catch((error) => alert(error))
