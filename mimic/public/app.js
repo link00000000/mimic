@@ -1,3 +1,12 @@
+// Default video constraints
+CONSTRAINTS = {
+    audio: false,
+    video: {
+        width: 640,
+        height: 480,
+        frameRate: 30
+    }
+}
 function enableSafariConsoleLog() {
     var userAgent = window.navigator.userAgent
 
@@ -269,14 +278,7 @@ async function main() {
     const latencyDataChannel = new LatencyDataChannel(peerConnection)
     const metadataDataChannel = new MetadataDataChannel(peerConnection)
 
-    const mediaStream = await getMedia({
-        audio: false,
-        video: {
-            width: 640,
-            height: 480,
-            frameRate: 30
-        }
-    })
+    const mediaStream = await getMedia(CONSTRAINTS)
 
     // Render video preview to html video element
     let videoPreviewElement = document.getElementById('video-preview')
