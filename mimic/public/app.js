@@ -12,12 +12,7 @@ function enableSafariConsoleLog() {
  * @returns MediaStream
  */
 async function getMedia(constraints) {
-    try {
-        return await navigator.mediaDevices.getUserMedia(constraints)
-    } catch (error) {
-        alert(error)
-        return null
-    }
+    return await navigator.mediaDevices.getUserMedia(constraints)
 }
 
 /**
