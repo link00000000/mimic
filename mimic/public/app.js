@@ -118,6 +118,18 @@ async function negotiate(peerConnection) {
         })
     })
 
+    switch (response.status) {
+        case 409:
+            throw new Error(
+                'Mimic camera already in use. Only 1 device can be connectedto Mimic at a time.'
+            )
+
+        case 500:
+            throw new Error(
+                'Something went wrong, try again later or restart Mimic.'
+            )
+    }
+
     const answer = await response.json()
     await peerConnection.setRemoteDescription(answer)
 }
@@ -278,7 +290,9 @@ async function main() {
     videoPreviewElement.srcObject = mediaStream
 
     if (mediaStream.getTracks().length < 0) {
-        throw new Error('Could not access video track')
+        throw new Error(
+            'Could not access video track, tray refreshing the page.'
+        )
     }
 
     if (mediaStream.getTracks().length !== 1) {
@@ -303,4 +317,7 @@ async function main() {
     )
 }
 
-main().catch((error) => alert(error))
+main().catch((error) => {
+    const errorMessage = error instanceof Error ? error.message : error
+    alert(errorMessage)
+})
