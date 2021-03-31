@@ -43,6 +43,7 @@ from pyvirtualcam.camera import _WindowsCamera
 from mimic.MetaData import MetaData
 from mimic.Pipeable import LogMessage
 from mimic.Utils.Host import resolve_host
+from mimic.Utils.SSL import generate_ssl_certs, ssl_certs_generated
 from mimic.Utils.Time import RollingTimeout, latency, timestamp
 
 ROOT = "mimic/public"
@@ -287,6 +288,9 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
 
     # Start HTTP server
     ssl_context = ssl.SSLContext()
+    if not ssl_certs_generated("certs/selfsigned.cert", "certs/selfsigned.pem"):
+        generate_ssl_certs("certs/selfsigned.cert", "certs/selfsigned.pem")
+        
     ssl_context.load_cert_chain(
         "certs/selfsigned.cert", "certs/selfsigned.pem")
 
