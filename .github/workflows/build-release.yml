@@ -1,0 +1,28 @@
+name: Build Release
+
+on: push
+
+jobs:
+    release-build:
+        name: Release Build
+        runs-on: windows-2019
+
+        steps:
+            - name: Checkout master
+              uses: actions/checkout@v2
+
+            - name: List directory
+              run: |
+                  dir
+
+    debug-build:
+        name: Debug Build
+        runs-on: windows-2019
+
+        steps:
+            - name: Checkout master
+              uses: actions/checkout@v2
+
+            - name: List directory
+              run: |
+                  dir
