@@ -1,3 +1,6 @@
+// Milliseconds to wait before resfreshing the page on error
+const RESFRESH_TIMEOUT = 1000
+
 // Default video constraints
 CONSTRAINTS = {
     audio: false,
@@ -135,6 +138,18 @@ async function negotiate(peerConnection) {
             type: localDescription.type
         })
     })
+
+    switch (response.status) {
+        case 409:
+            throw new Error(
+                'Mimic camera already in use. Only 1 device can be connected to Mimic at a time.'
+            )
+
+        case 500:
+            throw new Error(
+                'Something went wrong, try again later or restart Mimic.'
+            )
+    }
 
     const answer = await response.json()
     await peerConnection.setRemoteDescription(answer)
@@ -326,8 +341,10 @@ async function main() {
     let videoPreviewElement = document.getElementById('video-preview')
     videoPreviewElement.srcObject = mediaDevices
 
-    if (mediaDevices.getVideoTracks().length < 0) {
-        throw new Error('Could not access video track')
+    if (mediaStream.getVideoTracks().length < 0) {
+        throw new Error(
+            'Could not access video track, try refreshing the page.'
+        )
     }
 
     if (mediaDevices.getVideoTracks().length !== 1) {
@@ -379,6 +396,11 @@ async function main() {
 }
 
 main().catch((error) => {
-    alert(error)
-    console.error(error)
+    const errorMessage = error instanceof Error ? error.message : error
+    alert(errorMessage + '\n\n*This page will automatically refresh.*')
+
+    // Wait for some time before refreshing incase the user cannot close the
+    // window with the alert open. We don't want their browser to get stuck in a
+    // refresh loop.
+    setTimeout(() => window.location.reload(), REFRESH_TIMEOUT)
 })
