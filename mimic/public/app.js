@@ -351,6 +351,7 @@ async function main() {
         track.getSettings().frameRate
     )
 
+
     // Close connection when page closes
     window.addEventListener(
         'beforeunload',
@@ -372,6 +373,9 @@ async function main() {
         },
         false
     )
+  
+    document.getElementById('spinner').classList.remove('show')
+
 }
 
 main().catch((error) => {
