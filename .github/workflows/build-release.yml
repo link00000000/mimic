@@ -16,6 +16,10 @@ jobs:
               with:
                   python-version: 3.9.x
 
+            - name: Install Pipenv
+              run: |
+                  pip install pipenv
+
     debug-build:
         name: Debug Build
         runs-on: windows-2019
