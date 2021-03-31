@@ -1,18 +1,36 @@
 // Milliseconds to wait before resfreshing the page on error
 const RESFRESH_TIMEOUT = 1000
 
+// Default video constraints
+CONSTRAINTS = {
+    audio: false,
+    video: {
+        width: 640,
+        height: 480,
+        frameRate: 30
+    }
+}
+
+/**
+ * Enable `console.log` in iOS safari.
+ *
+ * By default, `console.log` is NOP in iOS Safari.
+ */
+function enableSafariConsoleLog() {
+    var userAgent = window.navigator.userAgent
+
+    if (userAgent.match(/iPad/i) || userAgent.match(/iPhone/i)) {
+        console.log = console.info
+    }
+}
+
 /**
  * Gets the media stream from the browser
  * @param {MediaConstraints} constraints Media contraints defined by the MediaStream API
  * @returns MediaStream
  */
 async function getMedia(constraints) {
-    try {
-        return await navigator.mediaDevices.getUserMedia(constraints)
-    } catch (error) {
-        alert(error)
-        return null
-    }
+    return await navigator.mediaDevices.getUserMedia(constraints)
 }
 
 /**
@@ -274,39 +292,70 @@ class LatencyDataChannel {
     }
 }
 
+/**
+ * Reuse existing RTP Sender to send a different video stream without the need
+ * of renegotiation.
+ * @param {RTCRtpSender} sender Sender that is sending the video stream
+ * @param {RTCDataChannel} metadataDataChannel Data channel used to send video
+ * track metadata
+ */
+async function replaceVideoTrack(sender, metadataDataChannel) {
+    const mediaDevices = await getMedia(CONSTRAINTS)
+
+    if (mediaDevices.getVideoTracks().length < 0) {
+        throw new Error('Could not access video track')
+    }
+
+    if (mediaDevices.getVideoTracks().length !== 1) {
+        console.warn(
+            'More than 1 video track found. Only the first track will be used.'
+        )
+    }
+
+    const track = mediaDevices.getVideoTracks()[0]
+
+    // Send metadata to server
+    await metadataDataChannel.waitForOpen()
+    metadataDataChannel.sendMetadata(
+        track.getSettings().width,
+        track.getSettings().height,
+        track.getSettings().frameRate
+    )
+
+    // Replace current video track with new track
+    sender.replaceTrack(track)
+
+    return mediaDevices
+}
+
 async function main() {
+    enableSafariConsoleLog()
+
     const peerConnection = createPeerConnection()
     const latencyDataChannel = new LatencyDataChannel(peerConnection)
     const metadataDataChannel = new MetadataDataChannel(peerConnection)
 
-    const mediaStream = await getMedia({
-        audio: false,
-        video: {
-            width: 640,
-            height: 480,
-            frameRate: 30
-        }
-    })
+    const mediaDevices = await getMedia(CONSTRAINTS)
 
     // Render video preview to html video element
     let videoPreviewElement = document.getElementById('video-preview')
-    videoPreviewElement.srcObject = mediaStream
+    videoPreviewElement.srcObject = mediaDevices
 
-    if (mediaStream.getTracks().length < 0) {
+    if (mediaStream.getVideoTracks().length < 0) {
         throw new Error(
             'Could not access video track, try refreshing the page.'
         )
     }
 
-    if (mediaStream.getTracks().length !== 1) {
+    if (mediaDevices.getVideoTracks().length !== 1) {
         console.warn(
             'More than 1 video track found. Only the first track will be used.'
         )
     }
 
     // Bind video track to RTC connection
-    const track = mediaStream.getTracks()[0]
-    peerConnection.addTrack(track, mediaStream)
+    const track = mediaDevices.getTracks()[0]
+    const sender = peerConnection.addTrack(track, mediaDevices)
 
     // Establish connection to server
     await negotiate(peerConnection)
@@ -318,6 +367,32 @@ async function main() {
         track.getSettings().height,
         track.getSettings().frameRate
     )
+
+
+    // Close connection when page closes
+    window.addEventListener(
+        'beforeunload',
+        () => {
+            peerConnection.close()
+        },
+        false
+    )
+
+    // Update the video track to use new resolution on orientation change
+    window.addEventListener(
+        'orientationchange',
+        async() => {
+            const mediaDevices = await replaceVideoTrack(
+                sender,
+                metadataDataChannel
+            )
+            videoPreviewElement.srcObject = mediaDevices
+        },
+        false
+    )
+  
+    document.getElementById('spinner').classList.remove('show')
+
 }
 
 main().catch((error) => {
