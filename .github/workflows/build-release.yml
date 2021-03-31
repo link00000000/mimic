@@ -1,6 +1,6 @@
 name: Build Release
 
-on: push
+on: [push]
 
 jobs:
     release-build:
@@ -11,9 +11,10 @@ jobs:
             - name: Checkout master
               uses: actions/checkout@v2
 
-            - name: List directory
-              run: |
-                  dir
+            - name: Set python version
+              uses: actions/setup-python@v2
+              with:
+                  python-version: 3.9.x
 
     debug-build:
         name: Debug Build
@@ -22,7 +23,3 @@ jobs:
         steps:
             - name: Checkout master
               uses: actions/checkout@v2
-
-            - name: List directory
-              run: |
-                  dir
