@@ -124,7 +124,7 @@ async function negotiate(peerConnection) {
     switch (response.status) {
         case 409:
             throw new Error(
-                'Mimic camera already in use. Only 1 device can be connectedto Mimic at a time.'
+                'Mimic camera already in use. Only 1 device can be connected to Mimic at a time.'
             )
 
         case 500:
