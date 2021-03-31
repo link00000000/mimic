@@ -294,7 +294,7 @@ async function main() {
 
     if (mediaStream.getTracks().length < 0) {
         throw new Error(
-            'Could not access video track, tray refreshing the page.'
+            'Could not access video track, try refreshing the page.'
         )
     }
 
