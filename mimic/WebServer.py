@@ -23,6 +23,7 @@ import logging
 import os
 import ssl
 from json.decoder import JSONDecodeError
+from mimetypes import MimeTypes
 from multiprocessing.connection import Connection
 from threading import Event
 from typing import Awaitable, Callable, Optional
@@ -46,6 +47,8 @@ from mimic.Utils.Time import RollingTimeout, latency, timestamp
 ROOT = "mimic/public"
 _STALE_CONNECTION_TIMEOUT = 5.0
 _PING_INTERVAL = 1.0
+
+_MIMETYPES = MimeTypes()
 
 cam: Optional[_WindowsCamera] = None
 
@@ -134,13 +137,15 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         content = open(os.path.join(ROOT, "index.html"), "r").read()
         return web.Response(content_type="text/html", text=content)
 
-    async def javascript(request: Request) -> StreamResponse:
-        content = open(os.path.join(ROOT, "app.js"), "r").read()
-        return web.Response(content_type="application/javascript", text=content)
+    async def static(request: Request) -> StreamResponse:
+        filename = os.path.join(ROOT, request.match_info['filename'])
 
-    async def css(request: Request) -> StreamResponse:
-        content = open(os.path.join(ROOT, "app.css"), "r").read()
-        return web.Response(content_type="text/css", text=content)
+        if not os.path.exists(filename):
+            return web.Response(status=404)
+
+        content = open(filename, 'r').read()
+        mime = _MIMETYPES.guess_type(filename)[0]
+        return web.Response(text=content, content_type=mime)
 
     async def close(request: Request) -> StreamResponse:
         num_connections = await close_all_connections()
@@ -256,8 +261,7 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
 
     app = web.Application(middlewares=[logging_middleware])
     app.router.add_get("/", index)
-    app.router.add_get("/app.js", javascript)
-    app.router.add_get("/app.css", css)
+    app.router.add_get(r'/{filename:.+}', static)
     app.router.add_post("/offer", offer)
     app.router.add_get('/close', close)
 
