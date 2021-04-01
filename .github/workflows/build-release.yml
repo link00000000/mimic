@@ -28,6 +28,12 @@ jobs:
               run: |
                   pipenv run build
 
+            - name: Archive build
+              uses: thedoctor0/zip-release@master
+              with:
+                  filename: 'mimic-win64'
+                  directory: 'dist'
+
     debug-build:
         name: Debug Build
         runs-on: windows-2019
