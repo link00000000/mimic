@@ -19,7 +19,6 @@ autopep8 = "*"
 mypy = "*"
 isort = "*"
 pydocstyle = "*"
-auto-py-to-exe = "*"
 
 [requires]
 python_version = "3.9"
