@@ -32,6 +32,14 @@ jobs:
               run: |
                   7z a -tzip mimic-win64.zip .\dist\mimic\*
 
+            - name: Create pre-release
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: mimic-win64.zip
+                  prerelease: yes
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     debug-build:
         name: Debug Build
         runs-on: windows-2019
