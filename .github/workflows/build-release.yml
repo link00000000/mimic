@@ -35,7 +35,8 @@ jobs:
               run: |
                   7z a -tzip mimic-win64.zip .\dist\mimic\*
 
-            - name: actions/upload-artifact@v2
+            - name: Create build artifact
+              uses: actions/upload-artifact@v2
               with:
                   name: Build
                   path: mimic-win64.zip
