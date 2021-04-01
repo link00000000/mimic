@@ -46,6 +46,7 @@ jobs:
         name: Create Pre-release
         runs-on: windows-2019
         needs: [release-build, debug-build]
+        if: startsWith(github.ref, 'refs/tags/') # Only create release if tag is created
 
         steps:
             - name: Download build artifact
@@ -60,7 +61,6 @@ jobs:
 
             - name: Create pre-release
               uses: softprops/action-gh-release@v1
-              if: startsWith(github.ref, 'refs/tags/') # Only create release if tag is created
               with:
                   files: mimic-win64.zip
                   prerelease: yes
