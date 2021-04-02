@@ -1,0 +1,103 @@
+name: Build Release
+
+on: [push]
+
+jobs:
+    release-build:
+        name: Release Build
+        runs-on: windows-2019
+
+        steps:
+            - name: Checkout master
+              uses: actions/checkout@v2
+
+            - name: Set python version
+              uses: actions/setup-python@v2
+              with:
+                  python-version: 3.9.x
+
+            - name: Install Pipenv
+              run: |
+                  pip install pipenv
+
+            - name: Install Python dependencies
+              run: |
+                  pipenv install
+
+            - name: Build executable
+              run: |
+                  pipenv run build
+
+            - name: Create build artifact
+              uses: actions/upload-artifact@v2
+              with:
+                  name: mimic-win64
+                  path: .\dist\mimic\*
+
+    debug-build:
+        name: Debug Build
+        runs-on: windows-2019
+
+        steps:
+            - name: Checkout master
+              uses: actions/checkout@v2
+
+            - name: Set python version
+              uses: actions/setup-python@v2
+              with:
+                  python-version: 3.9.x
+
+            - name: Install Pipenv
+              run: |
+                  pip install pipenv
+
+            - name: Install Python dependencies
+              run: |
+                  pipenv install
+
+            - name: Build executable
+              run: |
+                  pipenv run build-debug
+
+            - name: Create build artifact
+              uses: actions/upload-artifact@v2
+              with:
+                  name: mimic-win64-debug
+                  path: .\dist\mimic\*
+
+    create-pre-release:
+        name: Create Pre-release
+        runs-on: windows-2019
+        needs: [release-build, debug-build]
+        if: startsWith(github.ref, 'refs/tags/') # Only create release if tag is created
+
+        steps:
+            - name: Download build artifact
+              uses: actions/download-artifact@v2
+              with:
+                  name: mimic-win64
+                  path: mimic-win64
+
+            - name: Archive build
+              run: |
+                  7z a -tzip mimic-win64.zip .\mimic-win64\*
+
+            - name: Download debug build artifact
+              uses: actions/download-artifact@v2
+              with:
+                  name: mimic-win64-debug
+                  path: mimic-win64-debug
+
+            - name: Archive debug build
+              run: |
+                  7z a -tzip mimic-win64-debug.zip .\mimic-win64-debug\*
+
+            - name: Create pre-release
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: |
+                      mimic-win64.zip
+                      mimic-win64-debug.zip
+                  prerelease: yes
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

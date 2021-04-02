@@ -22,6 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import logging
+import multiprocessing
 from multiprocessing import Event, Pipe, Process
 from signal import SIGINT, SIGTERM, signal
 from sys import stdout
@@ -106,4 +107,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     main()

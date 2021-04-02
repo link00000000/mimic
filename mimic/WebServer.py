@@ -24,6 +24,7 @@ import os
 import ssl
 import time
 from json.decoder import JSONDecodeError
+from mimetypes import MimeTypes
 from multiprocessing.connection import Connection
 from threading import Event
 from typing import Awaitable, Callable, Optional
@@ -44,6 +45,7 @@ from pyvirtualcam.camera import _WindowsCamera
 from mimic.MetaData import MetaData
 from mimic.Pipeable import LogMessage
 from mimic.Utils.Host import resolve_host
+from mimic.Utils.SSL import generate_ssl_certs, ssl_certs_generated
 from mimic.Utils.Time import RollingTimeout, latency, timestamp
 
 ROOT = "mimic/public"
@@ -53,6 +55,8 @@ _STALE_CONNECTION_TIMEOUT = 5.0
 _PING_INTERVAL = 1.0
 _MAX_CAMERA_INIT_RETRY = 5
 _CAMERA_INIT_RETRY_INTERVAL = 1
+
+_MIMETYPES = MimeTypes()
 
 cam: Optional[_WindowsCamera] = None
 is_cam_idle = True
@@ -160,13 +164,15 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         content = open(os.path.join(ROOT, "index.html"), "r").read()
         return web.Response(content_type="text/html", text=content)
 
-    async def javascript(request: Request) -> StreamResponse:
-        content = open(os.path.join(ROOT, "app.js"), "r").read()
-        return web.Response(content_type="application/javascript", text=content)
+    async def static(request: Request) -> StreamResponse:
+        filename = os.path.join(ROOT, request.match_info['filename'])
 
-    async def css(request: Request) -> StreamResponse:
-        content = open(os.path.join(ROOT, "app.css"), "r").read()
-        return web.Response(content_type="text/css", text=content)
+        if not os.path.exists(filename):
+            return web.Response(status=404)
+
+        content = open(filename, 'r').read()
+        mime = _MIMETYPES.guess_type(filename)[0]
+        return web.Response(text=content, content_type=mime)
 
     async def close(request: Request) -> StreamResponse:
         num_connections = await close_all_connections()
@@ -314,13 +320,15 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
 
     # Start HTTP server
     ssl_context = ssl.SSLContext()
+    if not ssl_certs_generated("certs/selfsigned.cert", "certs/selfsigned.pem"):
+        generate_ssl_certs("certs/selfsigned.cert", "certs/selfsigned.pem")
+        
     ssl_context.load_cert_chain(
         "certs/selfsigned.cert", "certs/selfsigned.pem")
 
     app = web.Application(middlewares=[logging_middleware])
     app.router.add_get("/", index)
-    app.router.add_get("/app.js", javascript)
-    app.router.add_get("/app.css", css)
+    app.router.add_get(r'/{filename:.+}', static)
     app.router.add_post("/offer", offer)
     app.router.add_get('/close', close)
 
@@ -370,3 +378,4 @@ def webserver_thread_runner(stop_event: Event, pipe: Connection):
     loop.set_exception_handler(lambda loop, context: print(loop, context))
 
     loop.run_until_complete(start_web_server(stop_event, pipe))
+    print("DONE")
