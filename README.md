@@ -1,5 +1,7 @@
 # mimic
 
+[![Build Release](https://github.com/link00000000/mimic/actions/workflows/build-release.yml/badge.svg?branch=master)](https://github.com/link00000000/mimic/actions/workflows/build-release.yml)
+
 ## Installing pyvirtualcam
 
 [pyvirtualcam](https://github.com/letmaik/pyvirtualcam/) requires that some DLLs  
@@ -17,17 +19,10 @@ directory as an administrator.
 pipenv run uninstall_dlls
 ```
 
-## Running aiohttp with aiortc Support
+## Automated Builds 🔨
 
-Access to the webcam requires that the webpage is secured using SSL/HTTPS. Self-signed SSL keys must be created for development. This can be done with a pip-env script:
+Builds are automatically created on commit using GitHub Actions. Build artifacts for `Windows x64` and `Windows x64 Debug` are available under GitHub actions.
 
-```shell
-pipenv run ssl_gencerts
-```
+### Automated Releases
 
-Keys and certificates will be written to the `certs/` directory. The server can be started with the SSL keys as follows:
-
-```shell
-cd demos
-python webcam.py --cert-file ../certs/selfsigned.cert --key-file ../certs/selfsigned.pem
-```
+If a commit is tagged with the format vX.X.X, production and debug builds will be created and a release will be made with the build artifacts attached.
