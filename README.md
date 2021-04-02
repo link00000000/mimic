@@ -1,5 +1,7 @@
 # mimic
 
+[![Build Release](https://github.com/link00000000/mimic/actions/workflows/build-release.yml/badge.svg?branch=master)](https://github.com/link00000000/mimic/actions/workflows/build-release.yml)
+
 ## Installing pyvirtualcam
 
 [pyvirtualcam](https://github.com/letmaik/pyvirtualcam/) requires that some DLLs  
