@@ -29,7 +29,7 @@ from sys import stdout
 from types import FrameType
 
 from mimic.GUI.GUI import GUI
-from mimic.Logging.AsyncLoggingHandler import AsyncFileHandler
+from mimic.Logging.AsyncLoggingHandler import AsyncRotatingFileHanlder
 from mimic.Logging.TkinterLoggingHandler import TkinterTextHandler
 from mimic.Pipeable import LogMessage, StringMessage
 from mimic.TrayIcon import TrayIcon
@@ -54,7 +54,8 @@ def main() -> None:
     signal(SIGINT, stop_handler)
     signal(SIGTERM, stop_handler)
 
-    tray_icon = TrayIcon(icon_image="mimic_logo.ico", hover_text="Mimic", stop_event=stop_event)
+    tray_icon = TrayIcon(icon_image="mimic_logo.ico",
+                         hover_text="Mimic", stop_event=stop_event)
     tray_icon.run()
 
     webserver_pipe, remote_webserver_pipe = Pipe()
@@ -70,7 +71,7 @@ def main() -> None:
 
     # Initialize web server logger
     webserver_logger = logging.getLogger('mimic.webserver')
-    webserver_logger.addHandler(AsyncFileHandler("mimic.log"))
+    webserver_logger.addHandler(AsyncRotatingFileHanlder("mimic.log"))
     webserver_logger.addHandler(logging.StreamHandler(stdout))
     webserver_logger.addHandler(TkinterTextHandler(
         gui.debug_log_window.debug_text))
