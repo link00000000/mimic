@@ -110,8 +110,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     handle = CreateMutex(None, 1, "Mimic Mutex")
     
     if GetLastError() != ERROR_ALREADY_EXISTS:
-        multiprocessing.freeze_support()
         main()
