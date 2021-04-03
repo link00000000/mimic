@@ -4,6 +4,7 @@ from tkinter.scrolledtext import ScrolledText
 
 from mimic.GUI.AbstractTkinterWindow import AbstractTkinterWindow
 from mimic.Pipeable import Pipeable
+from PIL import Image, ImageTk
 
 
 class DebugLogWindow(AbstractTkinterWindow, Pipeable):
@@ -23,6 +24,12 @@ class DebugLogWindow(AbstractTkinterWindow, Pipeable):
         super().__init__(master)
 
         self.master = master
+
+        # TkInter photoimage only supports PPM PGM image formats
+        # Using ImageTk and Image from PIL gets around this
+        mimic_logo = ImageTk.PhotoImage(Image.open("mimic_logo.ico"))
+        self.iconphoto(False, mimic_logo)
+
         self.title("Mimic - Debug Logs")
         self.hide()
 

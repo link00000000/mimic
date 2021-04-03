@@ -5,6 +5,7 @@ from mimic.EventEmitter import EventEmitter
 from mimic.GUI.AbstractTkinterWindow import AbstractTkinterWindow
 from mimic.GUI.Widgets.QRCode import QRCodeImage
 from mimic.Utils.Host import resolve_host
+from PIL import Image, ImageTk
 
 
 class MainWindow(AbstractTkinterWindow, EventEmitter):
@@ -26,6 +27,12 @@ class MainWindow(AbstractTkinterWindow, EventEmitter):
         super().__init__(master)
 
         self.master = master
+
+        # TkInter photoimage only supports PPM PGM image formats
+        # Using ImageTk and Image from PIL gets around this
+        mimic_logo = ImageTk.PhotoImage(Image.open("mimic_logo.ico"))
+        self.iconphoto(False, mimic_logo)
+
         self.title("Mimic")
         self.hide()
         
