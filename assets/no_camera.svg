@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="141.29073mm"
+   height="39.140987mm"
+   viewBox="0 0 141.29073 39.140987"
+   version="1.1"
+   id="svg8"
+   inkscape:version="1.0.2 (e86c870879, 2021-01-15, custom)"
+   sodipodi:docname="no_camera.svg">
+  <defs
+     id="defs2">
+    <rect
+       x="84.510834"
+       y="64.418983"
+       width="105.89286"
+       height="43.57143"
+       id="rect854" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="277.80742"
+     inkscape:cy="226.56789"
+     inkscape:document-units="mm"
+     inkscape:current-layer="g850"
+     inkscape:document-rotation="0"
+     showgrid="false"
+     inkscape:object-paths="true"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:pagecheckerboard="true"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="1042"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-34.354636,-17.109481)">
+    <g
+       id="g850"
+       transform="matrix(0.26458333,0,0,0.26458333,82.528236,103.29398)">
+      <text
+         x="0"
+         y="35"
+         fill="#000000"
+         font-size="5px"
+         font-weight="bold"
+         font-family="'Helvetica Neue', Helvetica, Arial-Unicode, Arial, Sans-serif"
+         id="text835"
+         style="fill:#ffffff;" />
+      <text
+         x="0"
+         y="40"
+         fill="#000000"
+         font-size="5px"
+         font-weight="bold"
+         font-family="'Helvetica Neue', Helvetica, Arial-Unicode, Arial, Sans-serif"
+         id="text837"
+         style="fill:#ffffff;" />
+      <text
+         xml:space="preserve"
+         id="text852"
+         style="font-style:normal;font-weight:normal;font-size:40px;font-family:sans-serif;white-space:pre;shape-inside:url(#rect854);fill:#ffffff;fill-opacity:1;stroke:none;" />
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-weight:normal;font-size:23.4897px;font-family:sans-serif;text-align:center;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.587242;"
+         x="85.724045"
+         y="-211.88985"
+         id="text860"><tspan
+           sodipodi:role="line"
+           id="tspan858"
+           x="85.724045"
+           y="-211.88985"
+           style="stroke-width:0.587242;fill:#ffffff;">No camera detected.</tspan><tspan
+           sodipodi:role="line"
+           x="85.724037"
+           y="-182.52773"
+           id="tspan862"
+           style="stroke-width:0.587242;fill:#ffffff;">Connect your smartphone to enable webcam.</tspan></text>
+      <g
+         id="g887"
+         transform="matrix(0.75314684,0,0,0.75314684,181.38319,-137.75039)"
+         style="fill:#ffffff">
+        <g
+           id="g868"
+           transform="matrix(1.4428967,0,0,1.4428967,-197.32171,-272.78704)"
+           style="fill:#ffffff">
+          <path
+             d="m 36.417,52.949 c -0.91,-1.791 -1.398,-3.777 -1.398,-5.843 0,-7.159 5.824,-12.983 12.982,-12.983 2.064,0 4.051,0.489 5.843,1.4 l 9.568,-9.568 -3.497,-9.621 H 36.087 L 32.309,26.726 H 12.494 v 41.728 h 8.419 z"
+             id="path864"
+             style="fill:#ffffff" />
+          <path
+             d="m 71.319,26.725 v 0 0 0 l 8.512,-8.54 -2.127,-2.116 -7.694,7.72 0.082,0.082 -47.259,47.257 -6.664,6.688 2.125,2.115 11.438,-11.478 H 83.505 V 26.725 Z M 48,60.089 c -2.696,0 -5.328,-0.853 -7.521,-2.416 l 18.06,-18.124 c 1.582,2.2 2.443,4.846 2.443,7.558 0,7.159 -5.824,12.982 -12.982,12.982 z"
+             id="path866"
+             style="fill:#ffffff" />
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

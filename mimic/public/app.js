@@ -368,7 +368,6 @@ async function main() {
         track.getSettings().frameRate
     )
 
-
     // Close connection when page closes
     window.addEventListener(
         'beforeunload',

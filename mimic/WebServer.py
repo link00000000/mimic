@@ -29,6 +29,7 @@ from multiprocessing.connection import Connection
 from threading import Event
 from typing import Awaitable, Callable, Optional
 
+import numpy as np
 import pyvirtualcam
 from aiohttp import web
 from aiohttp.web_request import Request
@@ -38,6 +39,7 @@ from aiortc.exceptions import InvalidStateError
 from aiortc.mediastreams import MediaStreamError
 from aiortc.rtcdatachannel import RTCDataChannel
 from aiortc.rtcpeerconnection import RemoteStreamTrack
+from PIL import Image
 from pyvirtualcam.camera import _WindowsCamera
 
 from mimic.MetaData import MetaData
@@ -47,6 +49,8 @@ from mimic.Utils.SSL import generate_ssl_certs, ssl_certs_generated
 from mimic.Utils.Time import RollingTimeout, latency, timestamp
 
 ROOT = "mimic/public"
+ASSETS_ROOT = "assets"
+
 _STALE_CONNECTION_TIMEOUT = 5.0
 _PING_INTERVAL = 1.0
 _MAX_CAMERA_INIT_RETRY = 5
@@ -55,6 +59,10 @@ _CAMERA_INIT_RETRY_INTERVAL = 1
 _MIMETYPES = MimeTypes()
 
 cam: Optional[_WindowsCamera] = None
+is_cam_idle = True
+
+_NO_CAMERA_IMAGE = np.asarray(Image.open(
+    os.path.join(ASSETS_ROOT, "no_camera.bmp")).convert('RGBA'), dtype=np.uint8)
 
 
 async def start_web_server(stop_event: Event, pipe: Connection) -> None:
@@ -89,6 +97,16 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         # ever need a case for it
         # cam.sleep_until_next_frame()
 
+    def show_static_frame() -> None:
+        """Paint static image to camera frame buffer."""
+        buffer_height, buffer_width = _NO_CAMERA_IMAGE.shape[:2]
+
+        global cam
+        if cam is None:
+            cam = pyvirtualcam.Camera(buffer_width, buffer_height, 20)
+
+        cam.send(_NO_CAMERA_IMAGE)
+
     def log(message: str, level: int = logging.INFO):
         """
         Send a log message through communication pipe.
@@ -106,8 +124,13 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         Returns:
             int: Number of connections that were closed
         """
+        global cam
         if cam is not None:
             cam.close()
+            cam = None
+
+            global is_cam_idle
+            is_cam_idle = True
 
         for pc in pcs:
             await pc.close()
@@ -209,12 +232,15 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
                                 log(f"Start camera with metadata: {metadata.width}x{metadata.height}@{metadata.framerate}",
                                     logging.DEBUG)
 
+                                global is_cam_idle
+                                is_cam_idle = False
+
                                 # HWND needs time to free before allocation of new camera
                                 # See: https://github.com/link00000000/mimic/issues/41
                                 for _ in range(_MAX_CAMERA_INIT_RETRY):
                                     try:
                                         cam = pyvirtualcam.Camera(
-                                            metadata.width, metadata.height, metadata.framerate)
+                                            metadata.width, metadata.height, metadata.framerate, delay=0)
                                         break
                                     except RuntimeError as error:
                                         if error.args[0] != "error starting virtual camera output":
@@ -259,8 +285,14 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
             @track.on("ended")
             async def on_ended():
                 log(f"Track {track.kind} ended")
+
+                global cam
                 if cam is not None:
                     cam.close()
+                    cam = None
+
+                    global is_cam_idle
+                    is_cam_idle = True
 
             while True:
                 if track.readyState != "live":
@@ -311,6 +343,9 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
 
     # Main loop
     while stop_event is None or not stop_event.is_set():
+        if is_cam_idle:
+            show_static_frame()
+
         await asyncio.sleep(0.05)
 
     # Clean up and close server

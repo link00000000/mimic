@@ -61,7 +61,7 @@ def main() -> None:
 
     initialize_local_app_data()
 
-    tray_icon = TrayIcon(icon_image="mimic_logo.ico",
+    tray_icon = TrayIcon(icon_image="assets/favicon.ico",
                          hover_text="Mimic", stop_event=stop_event)
     tray_icon.run()
 
