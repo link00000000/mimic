@@ -23,16 +23,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import logging
 import multiprocessing
+import os
 from multiprocessing import Event, Pipe, Process
+from os import environ, mkdir
 from signal import SIGINT, SIGTERM, signal
 from sys import stdout
 from types import FrameType
 
 from mimic.GUI.GUI import GUI
-from mimic.Logging.AsyncLoggingHandler import AsyncFileHandler
+from mimic.Logging.AsyncLoggingHandler import AsyncRotatingFileHanlder
+from mimic.Logging.Formatter import log_formatter
 from mimic.Logging.TkinterLoggingHandler import TkinterTextHandler
 from mimic.Pipeable import LogMessage, StringMessage
 from mimic.TrayIcon import TrayIcon
+from mimic.Utils.AppData import (initialize_local_app_data,
+                                 mkdir_local_app_data, resolve_local_app_data)
 from mimic.WebServer import webserver_thread_runner
 
 stop_event = Event()
@@ -54,6 +59,8 @@ def main() -> None:
     signal(SIGINT, stop_handler)
     signal(SIGTERM, stop_handler)
 
+    initialize_local_app_data()
+
     tray_icon = TrayIcon(icon_image="assets/favicon.ico",
                          hover_text="Mimic", stop_event=stop_event)
     tray_icon.run()
@@ -70,11 +77,32 @@ def main() -> None:
         stop_event.set()
 
     # Initialize web server logger
+    mkdir_local_app_data("logs")
     webserver_logger = logging.getLogger('mimic.webserver')
-    webserver_logger.addHandler(AsyncFileHandler("mimic.log"))
-    webserver_logger.addHandler(logging.StreamHandler(stdout))
-    webserver_logger.addHandler(TkinterTextHandler(
-        gui.debug_log_window.debug_text))
+
+    _webserver_stdout_handler = logging.StreamHandler(stdout)
+    _webserver_stdout_handler.setFormatter(log_formatter)
+    _webserver_stdout_handler.setLevel(
+        logging.DEBUG
+        if "PY_ENV" in os.environ and os.environ["PY_ENV"] == "development"
+        else logging.INFO
+    )
+    webserver_logger.addHandler(_webserver_stdout_handler)
+
+    _webserver_file_handler = AsyncRotatingFileHanlder(resolve_local_app_data("logs", "webserver.log"))
+    _webserver_file_handler.setFormatter(log_formatter)
+    _webserver_file_handler.setLevel(logging.DEBUG)
+    webserver_logger.addHandler(_webserver_file_handler)
+
+    _webserver_tkinter_handler = TkinterTextHandler(gui.debug_log_window.debug_text)
+    _webserver_tkinter_handler.setFormatter(log_formatter)
+    _webserver_tkinter_handler.setLevel(
+        logging.DEBUG
+        if "PY_ENV" in os.environ and os.environ["PY_ENV"] == "development"
+        else logging.INFO
+    )
+    webserver_logger.addHandler(_webserver_tkinter_handler)
+
     webserver_logger.setLevel(logging.DEBUG)
 
     # Main loop
