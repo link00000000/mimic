@@ -30,6 +30,10 @@ from signal import SIGINT, SIGTERM, signal
 from sys import stdout
 from types import FrameType
 
+from win32api import GetLastError
+from win32event import CreateMutex
+from winerror import ERROR_ALREADY_EXISTS
+
 from mimic.GUI.GUI import GUI
 from mimic.Logging.AsyncLoggingHandler import AsyncRotatingFileHanlder
 from mimic.Logging.Formatter import log_formatter
@@ -136,4 +140,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
-    main()
+    handle = CreateMutex(None, 1, "Mimic Mutex")
+    
+    if GetLastError() != ERROR_ALREADY_EXISTS:
+        main()
