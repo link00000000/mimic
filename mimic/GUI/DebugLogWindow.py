@@ -27,7 +27,7 @@ class DebugLogWindow(AbstractTkinterWindow, Pipeable):
 
         # TkInter photoimage only supports PPM PGM image formats
         # Using ImageTk and Image from PIL gets around this
-        mimic_logo = ImageTk.PhotoImage(Image.open("mimic_logo.ico"))
+        mimic_logo = ImageTk.PhotoImage(Image.open("./assets/favicon.ico"))
         self.iconphoto(False, mimic_logo)
 
         self.title("Mimic - Debug Logs")
