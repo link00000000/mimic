@@ -4,6 +4,7 @@ import tkinter as tk
 from mimic.EventEmitter import EventEmitter
 from mimic.GUI.DebugLogWindow import DebugLogWindow
 from mimic.GUI.MainWindow import MainWindow
+from PIL import Image, ImageTk
 
 
 class GUI(tk.Tk, EventEmitter):
@@ -12,6 +13,11 @@ class GUI(tk.Tk, EventEmitter):
     def __init__(self):
         """Initialize main Tkinter user interface instance."""
         super().__init__()
+
+        # TkInter photoimage only supports PPM PGM image formats
+        # Using ImageTk and Image from PIL gets around this
+        mimic_logo = ImageTk.PhotoImage(Image.open("./assets/favicon.ico"))
+        self.iconphoto(True, mimic_logo)
 
         self.create_windows()
 
