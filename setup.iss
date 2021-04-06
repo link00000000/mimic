@@ -7,9 +7,9 @@
 #define ApplicationURL "https://github.com/link00000000/mimic"
 #define ApplicationExeName "mimic.exe"
 
-; Override application version with /DApplicationVersion=1.2.3
+; Override application version with /DApplicationVersion=v1.2.3
 #ifndef ApplicationVersion
-    #define ApplicationVersion "0.0.0"
+    #define ApplicationVersion "v0.0.0"
 #endif
 
 ; Override output file name with /DOutputFilename=setup-mimic-win64-debug
