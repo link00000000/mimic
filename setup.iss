@@ -1,3 +1,8 @@
+; @TODO Set registry values
+; @TODO Incorporate into GitHub actions
+; @TODO Install pyvirtualcam OBS DLLs
+; @TODO Cleanup local app data on install
+
 #define ApplicationName "Mimic"
 #define ApplicationURL "https://github.com/link00000000/mimic"
 #define ApplicationExeName "mimic.exe"
