@@ -4,6 +4,7 @@ import tkinter as tk
 from mimic.EventEmitter import EventEmitter
 from mimic.GUI.DebugLogWindow import DebugLogWindow
 from mimic.GUI.MainWindow import MainWindow
+from PIL import Image, ImageTk
 
 
 class GUI(tk.Tk, EventEmitter):
@@ -25,3 +26,9 @@ class GUI(tk.Tk, EventEmitter):
         """Initialize all child windows."""
         self.debug_log_window = DebugLogWindow(self)
         self.main_window = MainWindow(self)
+
+        # TkInter photoimage only supports PPM PGM image formats
+        # Using ImageTk and Image from PIL gets around this
+        mimic_logo = ImageTk.PhotoImage(Image.open("./assets/favicon.ico"))
+        self.debug_log_window.iconphoto(False, mimic_logo)
+        self.main_window.iconphoto(False, mimic_logo)
