@@ -14,6 +14,11 @@ class GUI(tk.Tk, EventEmitter):
         """Initialize main Tkinter user interface instance."""
         super().__init__()
 
+        # TkInter photoimage only supports PPM PGM image formats
+        # Using ImageTk and Image from PIL gets around this
+        mimic_logo = ImageTk.PhotoImage(Image.open("./assets/favicon.ico"))
+        self.iconphoto(True, mimic_logo)
+
         self.create_windows()
 
         # The main Tkinter instance will spawn a window. Instead of using this
@@ -26,9 +31,3 @@ class GUI(tk.Tk, EventEmitter):
         """Initialize all child windows."""
         self.debug_log_window = DebugLogWindow(self)
         self.main_window = MainWindow(self)
-
-        # TkInter photoimage only supports PPM PGM image formats
-        # Using ImageTk and Image from PIL gets around this
-        mimic_logo = ImageTk.PhotoImage(Image.open("./assets/favicon.ico"))
-        self.debug_log_window.iconphoto(False, mimic_logo)
-        self.main_window.iconphoto(False, mimic_logo)
