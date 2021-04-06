@@ -23,9 +23,9 @@ class DebugLogWindow(AbstractTkinterWindow, Pipeable):
         super().__init__(master)
 
         self.master = master
-
         self.title("Mimic - Debug Logs")
         self.hide()
+
         self.create_widgets()
 
         # Instead of destroying the window reference on close, we should just
