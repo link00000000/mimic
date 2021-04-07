@@ -149,7 +149,7 @@ jobs:
                       mimic-win64.zip
                       mimic-win64-debug.zip
                       setup-mimic-win64.exe
-                      setup-mimic-win64.exe
+                      setup-mimic-win64-debug.exe
                   prerelease: yes
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
