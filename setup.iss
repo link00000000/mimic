@@ -1,5 +1,4 @@
 ; @TODO Incorporate into GitHub actions
-; @TODO Cleanup local app data on install
 ; @TODO Run at startup
 
 #define ApplicationName "Mimic"
