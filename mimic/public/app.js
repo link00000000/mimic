@@ -156,44 +156,6 @@ async function negotiate(peerConnection) {
 }
 
 /**
- * Test data channel that sends ping/pong messages
- */
-class PingPongDataChannel {
-    /**
-     * Establish ping pong data channel over RTC peer connection
-     * @param {RTCPeerConnection} peerConnection Instance of `RTCPeerConnection` that has already been negotiated
-     */
-    constructor(peerConnection) {
-        this.interval = null
-        this.dataChannel = peerConnection.createDataChannel('chat', {
-            ordered: true
-        })
-
-        this.dataChannel.onopen = this.onOpen.bind(this)
-        this.dataChannel.onclose = this.onClose.bind(this)
-        this.dataChannel.onmessage = this.onMessage.bind(this)
-    }
-
-    onOpen() {
-        debugLog('Ping Pong Data Channel', '- open')
-        this.interval = setInterval(() => {
-            const message = 'ping ' + new Date().getTime()
-            debugLog('Ping Pong Data Channel', '> ' + message)
-            this.dataChannel.send(message)
-        }, 1000)
-    }
-
-    onClose() {
-        clearInterval(this.interval)
-        debugLog('Ping Pong Data Channel', '- close')
-    }
-
-    onMessage(event) {
-        debugLog('Ping Pong Data Channel', '< ' + event.data)
-    }
-}
-
-/**
  * Data channel that sends metadata about the video stream
  */
 class MetadataDataChannel {
