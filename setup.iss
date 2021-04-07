@@ -1,4 +1,3 @@
-; @TODO Set registry values
 ; @TODO Incorporate into GitHub actions
 ; @TODO Cleanup local app data on install
 ; @TODO Run at startup
@@ -62,3 +61,17 @@ Filename: "{sys}\Regsvr32.exe"; Parameters: "/n /i:1 /s OBS-VirtualCam\bin\64bit
 [UninstallRun]
 Filename: "{sys}\Regsvr32.exe"; Parameters: "/u /s OBS-VirtualCam\bin\32bit\obs-virtualsource.dll"; WorkingDir: "{app}"; StatusMsg: "Unregistering OBS-VirtualCam 32bit"; Flags: runhidden
 Filename: "{sys}\Regsvr32.exe"; Parameters: "/u /s OBS-VirtualCam\bin\64bit\obs-virtualsource.dll"; WorkingDir: "{app}"; StatusMsg: "Unregistering OBS-VirtualCam 64bit"; Flags: runhidden
+
+; NOTE Setting registry entry cannot be done with [Registry] because it will be
+; overwritten when OBS-VirtualCam DLLs are installed
+[Code]
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+    Log('CurStepChanged(' + IntToStr(Ord(CurStep)) + ') called')
+    if CurStep = ssPostInstall then
+    begin
+        Log('Writing registry entries')
+        RegWriteStringValue(
+            HKEY_CLASSES_ROOT, 'WOW6432Node\CLSID\{860BB310-5D01-11d0-BD3B-00A0C911CE86}\Instance\{27B05C2D-93DC-474A-A5DA-9BBA34CB2A9C}', 'FriendlyName', 'Mimic');
+    end;
+end;
