@@ -1,6 +1,10 @@
 // Milliseconds to wait before resfreshing the page on error
 const REFRESH_TIMEOUT = 1000
 
+// Milliseconds to wait between latency messages before connection is considered
+// dead
+const HEARTBEAT_TIMEOUT = 5000
+
 // Default video constraints
 CONSTRAINTS = {
     audio: false,
@@ -231,6 +235,12 @@ class LatencyDataChannel {
         this.dataChannel.onopen = this.onOpen.bind(this)
         this.dataChannel.onclose = this.onClose.bind(this)
         this.dataChannel.onmessage = this.onMessage.bind(this)
+
+        this.heartbeatTimeout = null
+    }
+
+    onConnectionLost() {
+        /* Should be overwritten before connection is established */
     }
 
     onOpen() {
@@ -244,6 +254,10 @@ class LatencyDataChannel {
     }
 
     onClose() {
+        if (this.heartbeatTimeout) {
+            clearTimeout(this.heartbeatTimeout)
+        }
+
         debugLog('Latency Data Channel', '- close')
     }
 
@@ -251,6 +265,24 @@ class LatencyDataChannel {
         debugLog('Latency Data Channel', '> ' + event.data)
         this.dataChannel.send(event.data)
         debugLog('Latency Data Channel', '< ' + event.data)
+
+        // If a message was received in the last `HEARTBEAT_TIMEOUT`
+        // milliseconds, reset the timeout
+        if (this.heartbeatTimeout) {
+            clearTimeout(this.heartbeatTimeout)
+        }
+
+        this.heartbeatTimeout = setTimeout(() => {
+            // If no message was received within the timeout, consider the
+            // connection dead
+            debugLog(
+                'Latency Data Channel',
+                'Dead connection detected, closing...'
+            )
+
+            this.onConnectionLost()
+            this.dataChannel.close()
+        }, HEARTBEAT_TIMEOUT)
     }
 }
 
@@ -290,12 +322,36 @@ async function replaceVideoTrack(sender, metadataDataChannel) {
     return mediaDevices
 }
 
+/**
+ * Display an error with an alert, print the error to `console.error`, and
+ * refresh the page
+ * @param {Error | string | number} error Error message
+ */
+function displayError(error) {
+    const errorMessage = error instanceof Error ? error.message : error
+    console.error(error)
+    alert(errorMessage + '\n\n*This page will automatically refresh.*')
+
+    // Wait for some time before refreshing incase the user cannot close the
+    // window with the alert open. We don't want their browser to get stuck in a
+    // refresh loop.
+    setTimeout(() => window.location.reload(), REFRESH_TIMEOUT)
+}
+
 async function main() {
     enableSafariConsoleLog()
 
     const peerConnection = createPeerConnection()
     const latencyDataChannel = new LatencyDataChannel(peerConnection)
     const metadataDataChannel = new MetadataDataChannel(peerConnection)
+
+    latencyDataChannel.onConnectionLost = () => {
+        displayError(
+            new Error(
+                'Connection to PC lost, make sure that Mimic is running on your PC'
+            )
+        )
+    }
 
     const mediaDevices = await getMedia(CONSTRAINTS)
 
@@ -351,17 +407,8 @@ async function main() {
         },
         false
     )
-  
-    document.getElementById('spinner').classList.remove('show')
 
+    document.getElementById('spinner').classList.remove('show')
 }
 
-main().catch((error) => {
-    const errorMessage = error instanceof Error ? error.message : error
-    alert(errorMessage + '\n\n*This page will automatically refresh.*')
-
-    // Wait for some time before refreshing incase the user cannot close the
-    // window with the alert open. We don't want their browser to get stuck in a
-    // refresh loop.
-    setTimeout(() => window.location.reload(), REFRESH_TIMEOUT)
-})
+main().catch(displayError)
