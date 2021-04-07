@@ -341,7 +341,7 @@ async function main() {
     let videoPreviewElement = document.getElementById('video-preview')
     videoPreviewElement.srcObject = mediaDevices
 
-    if (mediaStream.getVideoTracks().length < 0) {
+    if (mediaDevices.getVideoTracks().length < 0) {
         throw new Error(
             'Could not access video track, try refreshing the page.'
         )
