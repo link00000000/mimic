@@ -62,6 +62,9 @@ Filename: "{sys}\Regsvr32.exe"; Parameters: "/n /i:1 /s OBS-VirtualCam\bin\64bit
 Filename: "{sys}\Regsvr32.exe"; Parameters: "/u /s OBS-VirtualCam\bin\32bit\obs-virtualsource.dll"; WorkingDir: "{app}"; StatusMsg: "Unregistering OBS-VirtualCam 32bit"; Flags: runhidden
 Filename: "{sys}\Regsvr32.exe"; Parameters: "/u /s OBS-VirtualCam\bin\64bit\obs-virtualsource.dll"; WorkingDir: "{app}"; StatusMsg: "Unregistering OBS-VirtualCam 64bit"; Flags: runhidden
 
+[UninstallDelete]
+Type: filesandordirs; Name: "{localappdata}/mimic"
+
 ; NOTE Setting registry entry cannot be done with [Registry] because it will be
 ; overwritten when OBS-VirtualCam DLLs are installed
 [Code]
