@@ -132,12 +132,24 @@ jobs:
               run: |
                   7z a -tzip mimic-win64-debug.zip .\mimic-win64-debug\*
 
+            - name: Download installer artifact
+              uses: actions/download-artifact@v2
+              with:
+                  name: setup-mimic-win64
+
+            - name: Download debug installer artifact
+              uses: actions/download-artifact@v2
+              with:
+                  name: setup-mimic-win64-debug
+
             - name: Create pre-release
               uses: softprops/action-gh-release@v1
               with:
                   files: |
                       mimic-win64.zip
                       mimic-win64-debug.zip
+                      setup-mimic-win64.exe
+                      setup-mimic-win64.exe
                   prerelease: yes
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
