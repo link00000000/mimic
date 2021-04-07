@@ -1,5 +1,4 @@
 ; @TODO Incorporate into GitHub actions
-; @TODO Run at startup
 
 #define ApplicationName "Mimic"
 #define ApplicationURL "https://github.com/link00000000/mimic"
@@ -41,6 +40,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "autostart"; Description: "Start Mimic when Windows starts"; GroupDescription: "Additional Options"; Flags: checkedonce
 
 [Files]
 Source: ".\dist\mimic\{#ApplicationExeName}"; DestDir: "{app}"; Flags: ignoreversion
@@ -51,6 +51,7 @@ Source: ".\build\OBS-VirtualCam\*"; DestDir: "{app}\OBS-VirtualCam"; Flags: igno
 [Icons]
 Name: "{autoprograms}\{#ApplicationName}"; Filename: "{app}\{#ApplicationExeName}"
 Name: "{autodesktop}\{#ApplicationName}"; Filename: "{app}\{#ApplicationExeName}"; Tasks: desktopicon
+Name: "{commonstartup}\{#ApplicationName}"; Filename: "{app}\{#ApplicationExeName}"; Tasks: autostart
 
 [Run]
 Filename: "{app}\{#ApplicationExeName}"; Description: "{cm:LaunchProgram,{#StringChange(ApplicationName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
