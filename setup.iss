@@ -1,7 +1,7 @@
 ; @TODO Set registry values
 ; @TODO Incorporate into GitHub actions
-; @TODO Install pyvirtualcam OBS DLLs
 ; @TODO Cleanup local app data on install
+; @TODO Run at startup
 
 #define ApplicationName "Mimic"
 #define ApplicationURL "https://github.com/link00000000/mimic"
@@ -33,6 +33,7 @@ LicenseFile=.\LICENSE
 OutputBaseFilename={#OutputFilename}
 OutputDir=.\dist
 SetupIconFile=.\assets\favicon.ico
+PrivilegesRequired=admin
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -46,6 +47,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: ".\dist\mimic\{#ApplicationExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: ".\dist\mimic\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: ".\build\OBS-VirtualCam\*"; DestDir: "{app}\OBS-VirtualCam"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
@@ -54,4 +56,9 @@ Name: "{autodesktop}\{#ApplicationName}"; Filename: "{app}\{#ApplicationExeName}
 
 [Run]
 Filename: "{app}\{#ApplicationExeName}"; Description: "{cm:LaunchProgram,{#StringChange(ApplicationName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+Filename: "{sys}\Regsvr32.exe"; Parameters: "/n /i:1 /s OBS-VirtualCam\bin\32bit\obs-virtualsource.dll"; WorkingDir: "{app}"; StatusMsg: "Registering OBS-VirtualCam 32bit"; Flags: runhidden
+Filename: "{sys}\Regsvr32.exe"; Parameters: "/n /i:1 /s OBS-VirtualCam\bin\64bit\obs-virtualsource.dll"; WorkingDir: "{app}"; StatusMsg: "Registering OBS-VirtualCam 64bit"; Flags: runhidden
 
+[UninstallRun]
+Filename: "{sys}\Regsvr32.exe"; Parameters: "/u /s OBS-VirtualCam\bin\32bit\obs-virtualsource.dll"; WorkingDir: "{app}"; StatusMsg: "Unregistering OBS-VirtualCam 32bit"; Flags: runhidden
+Filename: "{sys}\Regsvr32.exe"; Parameters: "/u /s OBS-VirtualCam\bin\64bit\obs-virtualsource.dll"; WorkingDir: "{app}"; StatusMsg: "Unregistering OBS-VirtualCam 64bit"; Flags: runhidden
