@@ -1,5 +1,3 @@
-; @TODO Incorporate into GitHub actions
-
 #define ApplicationName "Mimic"
 #define ApplicationURL "https://github.com/link00000000/mimic"
 #define ApplicationExeName "mimic.exe"
