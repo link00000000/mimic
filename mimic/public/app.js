@@ -1,5 +1,5 @@
 // Milliseconds to wait before resfreshing the page on error
-const RESFRESH_TIMEOUT = 1000
+const REFRESH_TIMEOUT = 1000
 
 // Default video constraints
 CONSTRAINTS = {
