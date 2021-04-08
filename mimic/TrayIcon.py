@@ -71,6 +71,10 @@ class TrayIcon(Pipeable):
         """
         self._stop_event.set()
 
+    def join(self):
+        """Join the thread that runs the TrayIcon."""
+        self._thread.join()
+
     def _loop(self):
         """
         Listen to events on the system tray icon.
