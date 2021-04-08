@@ -42,6 +42,7 @@ from aiortc.rtcpeerconnection import RemoteStreamTrack
 from PIL import Image
 from pyvirtualcam.camera import _WindowsCamera
 
+from mimic.Constants import SLEEP_INTERVAL
 from mimic.MetaData import MetaData
 from mimic.Pipeable import LogMessage
 from mimic.Utils.Host import resolve_host
@@ -322,7 +323,7 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
     ssl_context = ssl.SSLContext()
     if not ssl_certs_generated("certs/selfsigned.cert", "certs/selfsigned.pem"):
         generate_ssl_certs("certs/selfsigned.cert", "certs/selfsigned.pem")
-        
+
     ssl_context.load_cert_chain(
         "certs/selfsigned.cert", "certs/selfsigned.pem")
 
@@ -346,7 +347,7 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         if is_cam_idle:
             show_static_frame()
 
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(SLEEP_INTERVAL)
 
     # Clean up and close server
     if cam is not None:

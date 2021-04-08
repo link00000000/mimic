@@ -5,6 +5,7 @@ from typing import Callable, Optional
 
 from infi.systray import SysTrayIcon
 
+from mimic.Constants import SLEEP_INTERVAL
 from mimic.Pipeable import Pipeable
 
 
@@ -86,4 +87,4 @@ class TrayIcon(Pipeable):
                 self._icon.shutdown()
                 return
 
-            sleep(0.05)
+            sleep(SLEEP_INTERVAL)
