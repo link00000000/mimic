@@ -42,6 +42,7 @@ from mimic.Pipeable import LogMessage, StringMessage
 from mimic.TrayIcon import TrayIcon
 from mimic.Utils.AppData import (initialize_local_app_data,
                                  mkdir_local_app_data, resolve_local_app_data)
+from mimic.Utils.Profiler import profile
 from mimic.WebServer import webserver_thread_runner
 
 stop_event = Event()
@@ -141,6 +142,9 @@ def main() -> None:
 if __name__ == "__main__":
     multiprocessing.freeze_support()
     handle = CreateMutex(None, 1, "Mimic Mutex")
-    
+
     if GetLastError() != ERROR_ALREADY_EXISTS:
-        main()
+        if "PY_ENV" in environ and environ["PY_ENV"] == "development":
+            profile(main)
+        else:
+            main()

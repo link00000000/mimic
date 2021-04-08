@@ -154,3 +154,5 @@ dmypy.json
 
 .scripts/tmp/
 certs/
+*.prof
+*.prof.txt
