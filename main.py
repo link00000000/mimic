@@ -28,12 +28,14 @@ from multiprocessing import Event, Pipe, Process
 from os import environ, mkdir
 from signal import SIGINT, SIGTERM, signal
 from sys import stdout
+from time import sleep
 from types import FrameType
 
 from win32api import GetLastError
 from win32event import CreateMutex
 from winerror import ERROR_ALREADY_EXISTS
 
+from mimic.Constants import SLEEP_INTERVAL
 from mimic.GUI.GUI import GUI
 from mimic.Logging.AsyncLoggingHandler import AsyncRotatingFileHanlder
 from mimic.Logging.Formatter import log_formatter
@@ -135,6 +137,8 @@ def main() -> None:
         # Update GUI
         gui.update_idletasks()
         gui.update()
+
+        sleep(SLEEP_INTERVAL)
 
     server_process.join()
 
