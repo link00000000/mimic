@@ -322,7 +322,7 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
     ssl_context = ssl.SSLContext()
     if not ssl_certs_generated("certs/selfsigned.cert", "certs/selfsigned.pem"):
         generate_ssl_certs("certs/selfsigned.cert", "certs/selfsigned.pem")
-        
+
     ssl_context.load_cert_chain(
         "certs/selfsigned.cert", "certs/selfsigned.pem")
 
@@ -378,4 +378,3 @@ def webserver_thread_runner(stop_event: Event, pipe: Connection):
     loop.set_exception_handler(lambda loop, context: print(loop, context))
 
     loop.run_until_complete(start_web_server(stop_event, pipe))
-    print("DONE")
