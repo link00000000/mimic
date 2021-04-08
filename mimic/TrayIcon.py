@@ -1,5 +1,6 @@
 """Mimic's system tray icon."""
 from threading import Event, Thread
+from time import sleep
 from typing import Callable, Optional
 
 from infi.systray import SysTrayIcon
@@ -84,3 +85,5 @@ class TrayIcon(Pipeable):
             if self._stop_event.is_set():
                 self._icon.shutdown()
                 return
+
+            sleep(0.05)
