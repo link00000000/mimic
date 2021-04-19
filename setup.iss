@@ -66,7 +66,7 @@ Type: filesandordirs; Name: "{localappdata}/mimic"
 ; NOTE Setting registry entry cannot be done with [Registry] because it will be
 ; overwritten when OBS-VirtualCam DLLs are installed
 [Code]
-
+{ Set correct camera name in registry }
 procedure SetCameraNameRegistryEntry();
 begin
     Log('Writing registry entry for camera name')
