@@ -101,7 +101,7 @@ begin
     Application := CreateOleObject('HNetCfg.FwAuthorizedApplication')
     Application.Name := 'Mimic'
     Application.IPVersion := NET_FW_IP_VERSION_ANY;
-    Application.ProcessImageFileName := ExpandConstant('{srcexe}')
+    Application.ProcessImageFileName := ExpandConstant('{app}/{#ApplicationExeName}');
     Application.Scope := NET_FW_SCOPE_ALL;
     Application.Enabled := True;
 
