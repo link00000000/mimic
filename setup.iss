@@ -79,7 +79,7 @@ end;
     @NOTE Adapted from https://web.archive.org/web/20170313090648/http://www.vincenzo.net/isxkb/index.php?title=Adding_a_rule_to_the_Windows_firewall
     @NOTE Adapted from https://github.com/HeliumProject/InnoSetup/blob/master/Examples/CodeAutomation.iss
 }
-{ These are winapi enum values from https://github.com/Alexpux/mingw-w64/blob/master/mingw-w64-headers/include/icftypes.h }
+{ These are winapi enum values from https://github.com/Alexpux/mingw-w64/blob/d0d7f784833bbb0b2d279310ddc6afb52fe47a46/mingw-w64-headers/include/icftypes.hh }
 const
     NET_FW_IP_VERSION_ANY = 2;
     NET_FW_SCOPE_ALL = 0;
