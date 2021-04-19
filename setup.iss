@@ -110,6 +110,25 @@ begin
     Log('Windows Firewall rule added');
 end;
 
+procedure RemoveWindowsFirewallRule();
+var
+    Firewall: Variant;
+begin
+    Log('Removing rule from Windows Firewall')
+
+    { Create Windows Firewall Automation object }
+    try
+        Firewall := CreateOleObject('HNetCfg.FwMgr');
+    except
+        RaiseException('Could not access Windows Firewall. Firewall rule may need to be removed manually');
+    end;
+
+    MsgBox(ExpandConstant('{app}\{#ApplicationExeName}'), mbInformation, mb_Ok)
+    Firewall.LocalPolicy.CurrentProfile.AuthorizedApplications.Remove(ExpandConstant('{app}\{#ApplicationExeName}'));
+
+    Log('Windows Firewall rule removed')
+end;
+
 { Automatically run every time a step in the installation changes }
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
@@ -118,4 +137,12 @@ begin
         SetCameraNameRegistryEntry();
     if CurStep = ssDone then
         AddWindowsFilewallRule();
+end;
+
+{ Automatically run every time a step in the uninstalltion changes }
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+    Log('CurUninstallSetpChanged(' + IntToStr(Ord(CurUninstallStep)) + ') called');
+    if CurUninstallStep = usPostUninstall then
+        RemoveWindowsFirewallRule();
 end;
