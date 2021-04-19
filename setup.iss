@@ -66,13 +66,19 @@ Type: filesandordirs; Name: "{localappdata}/mimic"
 ; NOTE Setting registry entry cannot be done with [Registry] because it will be
 ; overwritten when OBS-VirtualCam DLLs are installed
 [Code]
+
+procedure SetCameraNameRegistryEntry();
+begin
+    Log('Writing registry entry for camera name')
+    RegWriteStringValue(
+        HKEY_CLASSES_ROOT, 'WOW6432Node\CLSID\{860BB310-5D01-11d0-BD3B-00A0C911CE86}\Instance\{27B05C2D-93DC-474A-A5DA-9BBA34CB2A9C}', 'FriendlyName', 'Mimic');
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
     Log('CurStepChanged(' + IntToStr(Ord(CurStep)) + ') called')
     if CurStep = ssPostInstall then
+        SetCameraNameRegistryEntry();
     begin
-        Log('Writing registry entries')
-        RegWriteStringValue(
-            HKEY_CLASSES_ROOT, 'WOW6432Node\CLSID\{860BB310-5D01-11d0-BD3B-00A0C911CE86}\Instance\{27B05C2D-93DC-474A-A5DA-9BBA34CB2A9C}', 'FriendlyName', 'Mimic');
     end;
 end;
