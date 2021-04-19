@@ -116,5 +116,6 @@ begin
     Log('CurStepChanged(' + IntToStr(Ord(CurStep)) + ') called');
     if CurStep = ssPostInstall then
         SetCameraNameRegistryEntry();
+    if CurStep = ssDone then
         AddWindowsFilewallRule();
 end;
