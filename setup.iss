@@ -110,6 +110,12 @@ begin
     Log('Windows Firewall rule added');
 end;
 
+{
+    Remove all Windows Firewall rules set during installation
+    @NOTE See https://docs.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwauthorizedapplications-remove
+    @NOTE See https://github.com/Alexpux/mingw-w64/blob/d0d7f784833bbb0b2d279310ddc6afb52fe47a46/mingw-w64-headers/include/icftypes.hh
+    @NOTE See https://github.com/getlantern/winfirewall/blob/caf28a30bcd27902196e00520956ce98a3d3f888/netfw.h
+}
 procedure RemoveWindowsFirewallRule();
 var
     Firewall: Variant;
