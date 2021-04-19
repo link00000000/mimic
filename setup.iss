@@ -69,16 +69,52 @@ Type: filesandordirs; Name: "{localappdata}/mimic"
 { Set correct camera name in registry }
 procedure SetCameraNameRegistryEntry();
 begin
-    Log('Writing registry entry for camera name')
+    Log('Writing registry entry for camera name');
     RegWriteStringValue(
         HKEY_CLASSES_ROOT, 'WOW6432Node\CLSID\{860BB310-5D01-11d0-BD3B-00A0C911CE86}\Instance\{27B05C2D-93DC-474A-A5DA-9BBA34CB2A9C}', 'FriendlyName', 'Mimic');
 end;
 
+{
+    Add rule to Windows Firewall to allow inbound traffic
+    @NOTE Adapted from https://web.archive.org/web/20170313090648/http://www.vincenzo.net/isxkb/index.php?title=Adding_a_rule_to_the_Windows_firewall
+    @NOTE Adapted from https://github.com/HeliumProject/InnoSetup/blob/master/Examples/CodeAutomation.iss
+}
+{ These are winapi enum values from https://github.com/Alexpux/mingw-w64/blob/master/mingw-w64-headers/include/icftypes.h }
+const
+    NET_FW_IP_VERSION_ANY = 2;
+    NET_FW_SCOPE_ALL = 0;
+
+procedure AddWindowsFilewallRule();
+var
+    Firewall, Application: Variant;
+begin
+    Log('Adding rule to Windows Firewall');
+
+    { Create Windows Firewall Automation object }
+    try
+        Firewall := CreateOleObject('HNetCfg.FwMgr');
+    except
+        RaiseException('Could not access Windows Firewall. Make sure it is installed first.');
+    end;
+
+    { Add Windows Firewall authorization rule }
+    Application := CreateOleObject('HNetCfg.FwAuthorizedApplication')
+    Application.Name := 'Mimic'
+    Application.IPVersion := NET_FW_IP_VERSION_ANY;
+    Application.ProcessImageFileName := ExpandConstant('{srcexe}')
+    Application.Scope := NET_FW_SCOPE_ALL;
+    Application.Enabled := True;
+
+    Firewall.LocalPolicy.CurrentProfile.AuthorizedApplications.Add(Application);
+
+    Log('Windows Firewall rule added');
+end;
+
+{ Automatically run every time a step in the installation changes }
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
-    Log('CurStepChanged(' + IntToStr(Ord(CurStep)) + ') called')
+    Log('CurStepChanged(' + IntToStr(Ord(CurStep)) + ') called');
     if CurStep = ssPostInstall then
         SetCameraNameRegistryEntry();
-    begin
-    end;
+        AddWindowsFilewallRule();
 end;
