@@ -288,6 +288,7 @@ async function main() {
     // Render video preview to html video element
     let videoPreviewElement = document.getElementById('video-preview')
     videoPreviewElement.srcObject = mediaDevices
+    videoPreviewElement.play()
 
     if (mediaDevices.getVideoTracks().length < 0) {
         throw new Error(
