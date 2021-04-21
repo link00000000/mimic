@@ -12,9 +12,6 @@ RTC data channels:
   every `_PING_INTERVAL` seconds to make sure the connection is still alive and
   record round time time in
   milliseconds
-- metadata - A single message is sent from the client during initial connection
-  containing a JSON object with information about the video stream (see `MetaData`)
-- 
 """
 
 import asyncio

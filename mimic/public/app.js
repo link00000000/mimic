@@ -160,66 +160,6 @@ async function negotiate(peerConnection) {
 }
 
 /**
- * Data channel that sends metadata about the video stream
- */
-class MetadataDataChannel {
-    /**
-     * Establish metadata data channel over RTC peer connection
-     * @param {RTCPeerConnection} peerConnection Instance of `RTCPeerConnection` that has already been negotiated
-     */
-    constructor(peerConnection) {
-        this.isOpen = false
-        this.dataChannel = peerConnection.createDataChannel('metadata', {
-            ordered: true
-        })
-
-        this.dataChannel.onopen = this.onOpen.bind(this)
-        this.dataChannel.onclose = this.onClose.bind(this)
-    }
-
-    /**
-     * Asynchronously wait for connection to peer to be established
-     * @returns Promise<void>
-     */
-    waitForOpen() {
-        return new Promise((resolve) => {
-            if (this.isOpen) {
-                resolve()
-            }
-
-            const listener = this.dataChannel.addEventListener(
-                'open',
-                () => {
-                    this.dataChannel.removeEventListener('close', listener)
-                    resolve()
-                },
-                false
-            )
-        })
-    }
-
-    onOpen() {
-        debugLog('Metadata Data Channel', '- open')
-        this.isOpen = true
-    }
-
-    onClose() {
-        debugLog('Metadata Data Channel', '- close')
-    }
-
-    sendMetadata(width, height, framerate) {
-        const payload = JSON.stringify({
-            width,
-            height,
-            framerate
-        })
-
-        debugLog('Metadata Data Channel', '> ' + payload)
-        this.dataChannel.send(payload)
-    }
-}
-
-/**
  * Data channel that measures latency over peer connection
  */
 class LatencyDataChannel {
@@ -290,10 +230,9 @@ class LatencyDataChannel {
  * Reuse existing RTP Sender to send a different video stream without the need
  * of renegotiation.
  * @param {RTCRtpSender} sender Sender that is sending the video stream
- * @param {RTCDataChannel} metadataDataChannel Data channel used to send video
- * track metadata
+ * track
  */
-async function replaceVideoTrack(sender, metadataDataChannel) {
+async function replaceVideoTrack(sender) {
     const mediaDevices = await getMedia(CONSTRAINTS)
 
     if (mediaDevices.getVideoTracks().length < 0) {
@@ -307,14 +246,6 @@ async function replaceVideoTrack(sender, metadataDataChannel) {
     }
 
     const track = mediaDevices.getVideoTracks()[0]
-
-    // Send metadata to server
-    await metadataDataChannel.waitForOpen()
-    metadataDataChannel.sendMetadata(
-        track.getSettings().width,
-        track.getSettings().height,
-        track.getSettings().frameRate
-    )
 
     // Replace current video track with new track
     sender.replaceTrack(track)
@@ -343,7 +274,6 @@ async function main() {
 
     const peerConnection = createPeerConnection()
     const latencyDataChannel = new LatencyDataChannel(peerConnection)
-    const metadataDataChannel = new MetadataDataChannel(peerConnection)
 
     latencyDataChannel.onConnectionLost = () => {
         displayError(
@@ -378,14 +308,6 @@ async function main() {
     // Establish connection to server
     await negotiate(peerConnection)
 
-    // Send metadata to server after initial connection
-    await metadataDataChannel.waitForOpen()
-    metadataDataChannel.sendMetadata(
-        track.getSettings().width,
-        track.getSettings().height,
-        track.getSettings().frameRate
-    )
-
     // Close connection when page closes
     window.addEventListener(
         'beforeunload',
@@ -399,10 +321,7 @@ async function main() {
     window.addEventListener(
         'orientationchange',
         async() => {
-            const mediaDevices = await replaceVideoTrack(
-                sender,
-                metadataDataChannel
-            )
+            const mediaDevices = await replaceVideoTrack(sender)
             videoPreviewElement.srcObject = mediaDevices
         },
         false
