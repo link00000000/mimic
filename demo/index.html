@@ -84,6 +84,9 @@
         const previewElement = document.getElementById('preview')
         const toggleButton = document.getElementById('toggle-button')
 
+        previewElement.style.width = `${width}px`
+        previewElement.style.height = `${height}px`
+
         let showing = false
         toggleButton.addEventListener('click', () => {
             if (!showing) {
