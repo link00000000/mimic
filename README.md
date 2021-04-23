@@ -23,8 +23,10 @@
 - [Advanced Usage ⚙](#advanced-usage-)
   - [Using with ngrok](#using-with-ngrok)
   - [Using with a VPN](#using-with-a-vpn)
-- [Automated builds 🔨](#automated-builds-)
-  - [Automated Releases](#automated-releases)
+- [For contributors 👩‍💻](#for-contributors-)
+  - [Automated builds 🔨](#automated-builds-)
+    - [Automated Releases](#automated-releases)
+  - [pyvirtualcam 🎥](#pyvirtualcam-)
 
 <!-- vim-markdown-toc -->
 
@@ -182,10 +184,17 @@ Mimic does work with ngrok. On the host machine, a Mimic can be exposed using th
 
 It has not been tested but Mimic should work on devices that are not on the same local network if they are both on the same VPN connection (depending on the VPN). Connect both devices to the same VPN before starting the host application and connecting with you webcam-enabled device.
 
-## Automated builds 🔨
+## For contributors 👩‍💻
+
+### Automated builds 🔨
 
 Builds are automatically created on commit using GitHub Actions. Build artifacts for `Windows x64` and `Windows x64 Debug` are available under GitHub actions.
 
-### Automated Releases
+#### Automated Releases
 
 If a commit is tagged with the format vX.X.X, production and debug builds will be created and a release will be made with the build artifacts attached.
+
+### pyvirtualcam 🎥
+
+pyvirtualcam was giving issues with trying to create a shared memory buffer while a previous one was in use. Instead we are using [a patched fork of pyvirtualcam](https://github.com/link00000000/pyvirtualcam). For more details, see [here](https://github.com/link00000000/mimic/wiki/Patched-fork-of-pyvirtualcam).
+
