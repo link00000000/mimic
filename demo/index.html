@@ -61,7 +61,7 @@
         audio: false,
         video: {
             width: 640,
-            height: 480,
+            height: 360,
             frameRate: 30
         }
     }
@@ -83,6 +83,8 @@
     async function main() {
         const previewElement = document.getElementById('preview')
         const toggleButton = document.getElementById('toggle-button')
+
+	const { width, height } = CONSTRAINTS.video
 
         previewElement.style.width = `${width}px`
         previewElement.style.height = `${height}px`
