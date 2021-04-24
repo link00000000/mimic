@@ -12,9 +12,9 @@ pythonlangutil = "*"
 "infi.systray" = "*"
 pyqrcode = "*"
 pyopenssl = "*"
-pyvirtualcam = "==0.3.2"
 pyinstaller = "==4.2"
 pywin32 = "*"
+pyvirtualcam = {file = "https://github.com/link00000000/pyvirtualcam/releases/download/v0.4.0/pyvirtualcam-0.3.2-cp39-cp39-win_amd64.whl"}
 
 [dev-packages]
 autopep8 = "*"
