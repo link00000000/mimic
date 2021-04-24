@@ -12,9 +12,6 @@ RTC data channels:
   every `_PING_INTERVAL` seconds to make sure the connection is still alive and
   record round time time in
   milliseconds
-- metadata - A single message is sent from the client during initial connection
-  containing a JSON object with information about the video stream (see `MetaData`)
-- 
 """
 
 import asyncio
@@ -22,7 +19,6 @@ import json
 import logging
 import os
 import ssl
-import time
 from json.decoder import JSONDecodeError
 from mimetypes import MimeTypes
 from multiprocessing.connection import Connection
@@ -39,11 +35,12 @@ from aiortc.exceptions import InvalidStateError
 from aiortc.mediastreams import MediaStreamError
 from aiortc.rtcdatachannel import RTCDataChannel
 from aiortc.rtcpeerconnection import RemoteStreamTrack
+from av import VideoFrame
+from av.video.reformatter import VideoReformatter
 from PIL import Image
 from pyvirtualcam.camera import _WindowsCamera
 
 from mimic.Constants import SLEEP_INTERVAL
-from mimic.MetaData import MetaData
 from mimic.Pipeable import LogMessage
 from mimic.Utils.Host import resolve_host
 from mimic.Utils.SSL import generate_ssl_certs, ssl_certs_generated
@@ -54,16 +51,27 @@ ASSETS_ROOT = "assets"
 
 _STALE_CONNECTION_TIMEOUT = 5.0
 _PING_INTERVAL = 1.0
-_MAX_CAMERA_INIT_RETRY = 5
+_MAX_CAMERA_RETRY_COUNT = 5
 _CAMERA_INIT_RETRY_INTERVAL = 1
+
+_CAMERA_WIDTH = 1280
+_CAMERA_HEIGHT = 720
+_CAMERA_FPS = 30
+_CAMERA_DELAY = 0
 
 _MIMETYPES = MimeTypes()
 
 cam: Optional[_WindowsCamera] = None
 is_cam_idle = True
 
-_NO_CAMERA_IMAGE = np.asarray(Image.open(
-    os.path.join(ASSETS_ROOT, "no_camera.bmp")).convert('RGBA'), dtype=np.uint8)
+# Store a global referece to the reformatter for performance
+# See https://pyav.org/docs/stable/api/video.html#av.video.reformatter.VideoReformatter
+_VIDEO_REFORMATTER = VideoReformatter()
+
+_NO_CAMREA_IMAGE_BMP = Image.open(os.path.join(ASSETS_ROOT, "no_camera.bmp")).convert('RGB')
+_NO_CAMERA_IMAGE_FRAME = VideoFrame.from_ndarray(np.asanyarray(_NO_CAMREA_IMAGE_BMP, dtype=np.uint8), format="rgb24").reformat(
+    width=_CAMERA_WIDTH, height=_CAMERA_HEIGHT, format='rgba')
+_NO_CAMERA_IMAGE_NDARRAY = _NO_CAMERA_IMAGE_FRAME.to_ndarray()
 
 
 async def start_web_server(stop_event: Event, pipe: Connection) -> None:
@@ -91,8 +99,8 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         # Format is a 2d array containing an RGBA tuples
         # 640x480
         if cam is not None:
-            frame_array = frame.to_ndarray(format="rgba")
-            cam.send(frame_array)
+            frame = _VIDEO_REFORMATTER.reformat(frame=frame, width=_CAMERA_WIDTH, height=_CAMERA_HEIGHT, format="rgba")
+            cam.send(frame.to_ndarray())
 
         # @NOTE Not sure if we need this but I'm going to leave it in case we
         # ever need a case for it
@@ -100,13 +108,10 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
 
     def show_static_frame() -> None:
         """Paint static image to camera frame buffer."""
-        buffer_height, buffer_width = _NO_CAMERA_IMAGE.shape[:2]
-
-        global cam
         if cam is None:
-            cam = pyvirtualcam.Camera(buffer_width, buffer_height, 20)
+            raise RuntimeError('Trying to send frame to camera before initialization')
 
-        cam.send(_NO_CAMERA_IMAGE)
+        cam.send(_NO_CAMERA_IMAGE_NDARRAY)
 
     def log(message: str, level: int = logging.INFO):
         """
@@ -125,15 +130,10 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
         Returns:
             int: Number of connections that were closed
         """
-        global cam
-        if cam is not None:
-            cam.close()
-            cam = None
+        global is_cam_idle
+        is_cam_idle = True
 
-            global is_cam_idle
-            is_cam_idle = True
-
-        for pc in pcs:
+        for pc in pcs.copy():
             await pc.close()
 
         num_pcs = len(pcs)
@@ -205,6 +205,9 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
                         # and the rolling timout should be started
                         if message == '-1':
                             heartbeat_timeout.start()
+
+                            global is_cam_idle
+                            is_cam_idle = False
                         else:
                             round_trip_time = latency(int(message))
                             log(f"Latency {round_trip_time}ms", logging.DEBUG)
@@ -219,54 +222,6 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
                             # raising an `InvalidStateError`. We should just
                             # ignore those.
                             pass
-
-                    if channel.label == 'metadata':
-                        try:
-                            metadata = MetaData(message)
-
-                            try:
-                                global cam
-                                if cam is not None:
-                                    cam.close()
-                                    cam = None
-
-                                log(f"Start camera with metadata: {metadata.width}x{metadata.height}@{metadata.framerate}",
-                                    logging.DEBUG)
-
-                                global is_cam_idle
-                                is_cam_idle = False
-
-                                # HWND needs time to free before allocation of new camera
-                                # See: https://github.com/link00000000/mimic/issues/41
-                                for _ in range(_MAX_CAMERA_INIT_RETRY):
-                                    try:
-                                        cam = pyvirtualcam.Camera(
-                                            metadata.width, metadata.height, metadata.framerate, delay=0)
-                                        break
-                                    except RuntimeError as error:
-                                        if error.args[0] != "error starting virtual camera output":
-                                            raise error
-
-                                        log("Failed to acquire camera, trying again...",
-                                            logging.WARNING)
-
-                                        # If we were unable to acquire the camera, wait for some time and try
-                                        # again
-                                        time.sleep(_CAMERA_INIT_RETRY_INTERVAL)
-
-                                # If we could not acquire the camera after a few tries, raise an exception
-                                if cam is None:
-                                    raise RuntimeError(
-                                        "error starting virtual camera output")
-
-                            except RuntimeError as error:
-                                log(str(error), logging.ERROR)
-                                cam = None
-                                await close_all_connections()
-
-                        except (KeyError, TypeError, JSONDecodeError) as error:
-                            log(str(error), logging.ERROR)
-                            await close_all_connections()
 
         @pc.on("connectionstatechange")
         async def on_connectionstatechange():
@@ -287,13 +242,8 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
             async def on_ended():
                 log(f"Track {track.kind} ended")
 
-                global cam
-                if cam is not None:
-                    cam.close()
-                    cam = None
-
-                    global is_cam_idle
-                    is_cam_idle = True
+                global is_cam_idle
+                is_cam_idle = True
 
             while True:
                 if track.readyState != "live":
@@ -342,6 +292,25 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
 
     log(f"Server listening at https://{resolve_host()}:8080")
 
+    # Acquire virtual camera
+    camera_init_sucess = False
+    for _ in range(_MAX_CAMERA_RETRY_COUNT):
+        global cam
+        try:
+            cam = pyvirtualcam.Camera(_CAMERA_WIDTH, _CAMERA_HEIGHT, _CAMERA_FPS, _CAMERA_DELAY)
+            camera_init_sucess = True
+            break
+
+        except RuntimeError as error:
+            if error.args[0] != 'error starting virtual camera output':
+                raise error
+
+            log("Failed to acquire camera, retrying.", logging.WARN)
+            await asyncio.sleep(_CAMERA_INIT_RETRY_INTERVAL)
+
+    if not camera_init_sucess:
+        raise RuntimeError("Failed to acquire camera.", logging.ERROR)
+
     # Main loop
     while stop_event is None or not stop_event.is_set():
         if is_cam_idle:
@@ -376,6 +345,6 @@ def webserver_thread_runner(stop_event: Event, pipe: Connection):
     """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop.set_exception_handler(lambda loop, context: print(loop, context))
+    loop.set_exception_handler(lambda loop, context: stop_event.set())
 
     loop.run_until_complete(start_web_server(stop_event, pipe))
