@@ -1,9 +1,11 @@
 """Mimic's system tray icon."""
 from threading import Event, Thread
+from time import sleep
 from typing import Callable, Optional
 
 from infi.systray import SysTrayIcon
 
+from mimic.Constants import SLEEP_INTERVAL
 from mimic.Pipeable import Pipeable
 
 
@@ -71,6 +73,10 @@ class TrayIcon(Pipeable):
         """
         self._stop_event.set()
 
+    def join(self):
+        """Join the thread that runs the TrayIcon."""
+        self._thread.join()
+
     def _loop(self):
         """
         Listen to events on the system tray icon.
@@ -84,3 +90,5 @@ class TrayIcon(Pipeable):
             if self._stop_event.is_set():
                 self._icon.shutdown()
                 return
+
+            sleep(SLEEP_INTERVAL)
