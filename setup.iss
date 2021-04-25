@@ -66,13 +66,89 @@ Type: filesandordirs; Name: "{localappdata}/mimic"
 ; NOTE Setting registry entry cannot be done with [Registry] because it will be
 ; overwritten when OBS-VirtualCam DLLs are installed
 [Code]
+{ Set correct camera name in registry }
+procedure SetCameraNameRegistryEntry();
+begin
+    Log('Writing registry entry for camera name');
+    RegWriteStringValue(
+        HKEY_CLASSES_ROOT, 'WOW6432Node\CLSID\{860BB310-5D01-11d0-BD3B-00A0C911CE86}\Instance\{27B05C2D-93DC-474A-A5DA-9BBA34CB2A9C}', 'FriendlyName', 'Mimic');
+end;
+
+{
+    Add rule to Windows Firewall to allow inbound traffic
+    @NOTE Adapted from https://web.archive.org/web/20170313090648/http://www.vincenzo.net/isxkb/index.php?title=Adding_a_rule_to_the_Windows_firewall
+    @NOTE Adapted from https://github.com/HeliumProject/InnoSetup/blob/master/Examples/CodeAutomation.iss
+}
+{ These are winapi enum values from https://github.com/Alexpux/mingw-w64/blob/d0d7f784833bbb0b2d279310ddc6afb52fe47a46/mingw-w64-headers/include/icftypes.hh }
+const
+    NET_FW_IP_VERSION_ANY = 2;
+    NET_FW_SCOPE_ALL = 0;
+
+procedure AddWindowsFilewallRule();
+var
+    Firewall, Application: Variant;
+begin
+    Log('Adding rule to Windows Firewall');
+
+    { Create Windows Firewall Automation object }
+    try
+        Firewall := CreateOleObject('HNetCfg.FwMgr');
+    except
+        RaiseException('Could not access Windows Firewall. Make sure it is installed first.');
+    end;
+
+    { Add Windows Firewall authorization rule }
+    Application := CreateOleObject('HNetCfg.FwAuthorizedApplication')
+    Application.Name := 'Mimic'
+    Application.IPVersion := NET_FW_IP_VERSION_ANY;
+    Application.ProcessImageFileName := ExpandConstant('{app}/{#ApplicationExeName}');
+    Application.Scope := NET_FW_SCOPE_ALL;
+    Application.Enabled := True;
+
+    Firewall.LocalPolicy.CurrentProfile.AuthorizedApplications.Add(Application);
+
+    Log('Windows Firewall rule added');
+end;
+
+{
+    Remove all Windows Firewall rules set during installation
+    @NOTE See https://docs.microsoft.com/en-us/windows/win32/api/netfw/nf-netfw-inetfwauthorizedapplications-remove
+    @NOTE See https://github.com/Alexpux/mingw-w64/blob/d0d7f784833bbb0b2d279310ddc6afb52fe47a46/mingw-w64-headers/include/icftypes.hh
+    @NOTE See https://github.com/getlantern/winfirewall/blob/caf28a30bcd27902196e00520956ce98a3d3f888/netfw.h
+}
+procedure RemoveWindowsFirewallRule();
+var
+    Firewall: Variant;
+begin
+    Log('Removing rule from Windows Firewall')
+
+    { Create Windows Firewall Automation object }
+    try
+        Firewall := CreateOleObject('HNetCfg.FwMgr');
+    except
+        RaiseException('Could not access Windows Firewall. Firewall rule may need to be removed manually');
+    end;
+
+    MsgBox(ExpandConstant('{app}\{#ApplicationExeName}'), mbInformation, mb_Ok)
+    Firewall.LocalPolicy.CurrentProfile.AuthorizedApplications.Remove(ExpandConstant('{app}\{#ApplicationExeName}'));
+
+    Log('Windows Firewall rule removed')
+end;
+
+{ Automatically run every time a step in the installation changes }
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
-    Log('CurStepChanged(' + IntToStr(Ord(CurStep)) + ') called')
+    Log('CurStepChanged(' + IntToStr(Ord(CurStep)) + ') called');
     if CurStep = ssPostInstall then
-    begin
-        Log('Writing registry entries')
-        RegWriteStringValue(
-            HKEY_CLASSES_ROOT, 'WOW6432Node\CLSID\{860BB310-5D01-11d0-BD3B-00A0C911CE86}\Instance\{27B05C2D-93DC-474A-A5DA-9BBA34CB2A9C}', 'FriendlyName', 'Mimic');
-    end;
+        SetCameraNameRegistryEntry();
+    if CurStep = ssDone then
+        AddWindowsFilewallRule();
+end;
+
+{ Automatically run every time a step in the uninstalltion changes }
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+    Log('CurUninstallSetpChanged(' + IntToStr(Ord(CurUninstallStep)) + ') called');
+    if CurUninstallStep = usPostUninstall then
+        RemoveWindowsFirewallRule();
 end;

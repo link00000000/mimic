@@ -41,7 +41,7 @@ jobs:
             - name: Create installer with commit hash as version (only when no tag)
               if: steps.tagName.outputs.tag == ''
               run: |
-                  pipenv run installer /DApplicationVersion=commit ${{ github.sha }} /DOutputFilename=setup-mimic-win64
+                  pipenv run installer /DApplicationVersion="commit ${{ github.sha }}" /DOutputFilename=setup-mimic-win64
 
             - name: Create installer with tag as version (only when tag)
               if: steps.tagName.outputs.tag != ''
