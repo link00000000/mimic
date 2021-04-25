@@ -20,6 +20,7 @@
   - [Removing firewall rule](#removing-firewall-rule)
 - [Starting Mimic when Windows starts 🏁](#starting-mimic-when-windows-starts-)
   - [Stop Mimic from starting when Windows starts](#stop-mimic-from-starting-when-windows-starts)
+- [Help! My web browser says that my connection is not safe! ‼](#help-my-web-browser-says-that-my-connection-is-not-safe-)
 - [Advanced Usage ⚙](#advanced-usage-)
   - [Using with ngrok](#using-with-ngrok)
   - [Using with a VPN](#using-with-a-vpn)
@@ -173,6 +174,11 @@ To access the startup folder
 ### Stop Mimic from starting when Windows starts
 
 To prevent Mimic from automatically starting with Windows, remove the shortcut from `shell:startup`.
+
+
+## Help! My web browser says that my connection is not safe! ‼
+
+Mimic uses SSL/HTTPS to transmit traffic between your device and your PC. Because all traffic remains on the local network, the SSL certificates must be generated on your PC instead of from a certificate authority which will result in false positives on your device. The solution is to ignore the warning and proceed anyway.
 
 ## Advanced Usage ⚙
 
