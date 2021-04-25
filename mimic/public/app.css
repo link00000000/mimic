@@ -24,6 +24,15 @@ body {
     height: 100%;
     position: fixed;
     object-fit: contain;
+    pointer-events: none;
+    touch-action: none;
+}
+
+#video-preview::-webkit-media-controls-play-button,
+#video-preview::-webkit-media-controls-start-playback-button {
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
 }
 
 #spinner {
