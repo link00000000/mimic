@@ -15,4 +15,5 @@ $ProgressPreference = 'Continue' # Restore download progress bar
 Write-Host "Extracting archive $out_dir\$filename"
 7z.exe x -r -aoa -o"$out_dir" "$out_dir\$filename"
 
+Write-host "Executing iscc.exe \"setup.iss\" @args"
 iscc.exe "setup.iss" @args
