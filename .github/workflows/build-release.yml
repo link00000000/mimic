@@ -34,6 +34,26 @@ jobs:
                   name: mimic-win64
                   path: .\dist\mimic\*
 
+            - name: Get tag name
+              uses: olegtarasov/get-tag@v2.1
+              id: tagName
+
+            - name: Create installer with commit hash as version (only when no tag)
+              if: steps.tagName.outputs.tag == ''
+              run: |
+                  pipenv run installer /DApplicationVersion=commit ${{ github.sha }} /DOutputFilename=setup-mimic-win64
+
+            - name: Create installer with tag as version (only when tag)
+              if: steps.tagName.outputs.tag != ''
+              run: |
+                  pipenv run installer /DApplicationVersion=${{ steps.tagName.outputs.tag }} /DOutputFilename=setup-mimic-win64
+
+            - name: Create installer artifact
+              uses: actions/upload-artifact@v2
+              with:
+                  name: setup-mimic-win64
+                  path: .\dist\setup-mimic-win64.exe
+
     debug-build:
         name: Debug Build
         runs-on: windows-2019
@@ -65,6 +85,26 @@ jobs:
                   name: mimic-win64-debug
                   path: .\dist\mimic\*
 
+            - name: Get tag name
+              uses: olegtarasov/get-tag@v2.1
+              id: tagName
+
+            - name: Create installer with commit hash as version (only when no tag)
+              if: steps.tagName.outputs.tag == ''
+              run: |
+                  pipenv run installer /DApplicationVersion="commit ${{ github.sha }}" /DOutputFilename=setup-mimic-win64-debug
+
+            - name: Create installer with tag as version (only when tag)
+              if: steps.tagName.outputs.tag != ''
+              run: |
+                  pipenv run installer /DApplicationVersion=${{ steps.tagName.outputs.tag }} /DOutputFilename=setup-mimic-win64-debug
+
+            - name: Create installer artifact
+              uses: actions/upload-artifact@v2
+              with:
+                  name: setup-mimic-win64-debug
+                  path: .\dist\setup-mimic-win64-debug.exe
+
     create-pre-release:
         name: Create Pre-release
         runs-on: windows-2019
@@ -92,12 +132,24 @@ jobs:
               run: |
                   7z a -tzip mimic-win64-debug.zip .\mimic-win64-debug\*
 
+            - name: Download installer artifact
+              uses: actions/download-artifact@v2
+              with:
+                  name: setup-mimic-win64
+
+            - name: Download debug installer artifact
+              uses: actions/download-artifact@v2
+              with:
+                  name: setup-mimic-win64-debug
+
             - name: Create pre-release
               uses: softprops/action-gh-release@v1
               with:
                   files: |
                       mimic-win64.zip
                       mimic-win64-debug.zip
+                      setup-mimic-win64.exe
+                      setup-mimic-win64-debug.exe
                   prerelease: yes
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
