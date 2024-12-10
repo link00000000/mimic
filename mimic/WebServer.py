@@ -43,7 +43,6 @@ from pyvirtualcam.camera import _WindowsCamera
 from mimic.Constants import SLEEP_INTERVAL
 from mimic.Pipeable import LogMessage
 from mimic.Utils.AppData import mkdir_local_app_data, resolve_local_app_data
-from mimic.Utils.Host import resolve_host
 from mimic.Utils.SSL import generate_ssl_certs, ssl_certs_generated
 from mimic.Utils.Time import RollingTimeout, latency, timestamp
 
@@ -291,11 +290,13 @@ async def start_web_server(stop_event: Event, pipe: Connection) -> None:
     runner = web.AppRunner(app, handle_signals=True)
     await runner.setup()
 
-    site = web.TCPSite(runner, host=resolve_host(),
-                       port=8080, ssl_context=ssl_context)
+    host = "0.0.0.0"
+    port = 8080
+    site = web.TCPSite(runner, host=host,
+                       port=port, ssl_context=ssl_context)
     await site.start()
 
-    log(f"Server listening at https://{resolve_host()}:8080")
+    log(f"Server listening at https://{host}:{port}")
 
     # Acquire virtual camera
     camera_init_sucess = False
