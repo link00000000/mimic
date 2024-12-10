@@ -29,7 +29,7 @@ jobs:
                   pipenv run build
 
             - name: Create build artifact
-              uses: actions/upload-artifact@v2
+              uses: actions/upload-artifact@v4
               with:
                   name: mimic-win64
                   path: .\dist\mimic\*
@@ -49,7 +49,7 @@ jobs:
                   pipenv run installer /DApplicationVersion=${{ steps.tagName.outputs.tag }} /DOutputFilename=setup-mimic-win64
 
             - name: Create installer artifact
-              uses: actions/upload-artifact@v2
+              uses: actions/upload-artifact@v4
               with:
                   name: setup-mimic-win64
                   path: .\dist\setup-mimic-win64.exe
@@ -80,7 +80,7 @@ jobs:
                   pipenv run build-debug
 
             - name: Create build artifact
-              uses: actions/upload-artifact@v2
+              uses: actions/upload-artifact@v4
               with:
                   name: mimic-win64-debug
                   path: .\dist\mimic\*
@@ -100,7 +100,7 @@ jobs:
                   pipenv run installer /DApplicationVersion=${{ steps.tagName.outputs.tag }} /DOutputFilename=setup-mimic-win64-debug
 
             - name: Create installer artifact
-              uses: actions/upload-artifact@v2
+              uses: actions/upload-artifact@v4
               with:
                   name: setup-mimic-win64-debug
                   path: .\dist\setup-mimic-win64-debug.exe
@@ -113,7 +113,7 @@ jobs:
 
         steps:
             - name: Download build artifact
-              uses: actions/download-artifact@v2
+              uses: actions/download-artifact@v4
               with:
                   name: mimic-win64
                   path: mimic-win64
@@ -123,7 +123,7 @@ jobs:
                   7z a -tzip mimic-win64.zip .\mimic-win64\*
 
             - name: Download debug build artifact
-              uses: actions/download-artifact@v2
+              uses: actions/download-artifact@v4
               with:
                   name: mimic-win64-debug
                   path: mimic-win64-debug
@@ -133,12 +133,12 @@ jobs:
                   7z a -tzip mimic-win64-debug.zip .\mimic-win64-debug\*
 
             - name: Download installer artifact
-              uses: actions/download-artifact@v2
+              uses: actions/download-artifact@v4
               with:
                   name: setup-mimic-win64
 
             - name: Download debug installer artifact
-              uses: actions/download-artifact@v2
+              uses: actions/download-artifact@v4
               with:
                   name: setup-mimic-win64-debug
 
